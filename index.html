@@ -1,0 +1,2699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RogueXP - The First Adventure</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
+    
+    <!-- Google Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        // Debug: Log the current origin to help with origin_mismatch errors
+        console.log('Current Origin:', window.location.origin);
+    </script>
+    <style>
+        /* --- Basic Setup & Typography --- */
+        :root {
+            --font-title: 'Uncial+Antiqua', cursive;
+            --font-body: 'Cinzel', serif;
+            --color-parchment: #f5e8c8;
+            --color-parchment-dark: #e0d4b6;
+            --color-ink: #4a3a2a;
+            --color-wood-dark: #5a3a1f;
+            --color-wood-medium: #7a5a3f;
+            --color-wood-light: #9a7a5f;
+            --color-metal: #a8a8a8;
+            --color-metal-dark: #7a7a7a;
+            --color-hunger: #d9534f;
+            --color-happiness: #5cb85c;
+            --color-xp: #5bc0de;
+            --color-danger: #a94442;
+            --color-heart: #e53935;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: #1a1a1a; /* Dark background for contrast */
+            color: var(--color-ink);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-title);
+            color: var(--color-wood-dark);
+        }
+
+        /* --- Main Manuscript Layout --- */
+        .manuscript-container {
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .parchment {
+            background-color: var(--color-parchment);
+            border: 10px solid var(--color-wood-dark);
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: box-shadow 0.5s ease; /* For pulsing */
+        }
+
+        /* Pulsing Warning */
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset, 0 0 15px 5px rgba(217, 83, 79, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset, 0 0 25px 15px rgba(217, 83, 79, 1); }
+            100% { box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset, 0 0 15px 5px rgba(217, 83, 79, 0.5); }
+        }
+        .parchment.pulsing {
+            animation: pulse-danger 1.5s infinite ease-in-out;
+        }
+
+        .manuscript-header,
+        .hearts-section, /* Added */
+        .stats-section,
+        .actions-section,
+        .adventure-section,
+        .game-body-grid, /* Added */
+        .manuscript-footer {
+            text-align: center;
+            border-bottom: 2px dashed var(--color-parchment-dark);
+            padding-bottom: 20px;
+        }
+        .manuscript-footer {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .title {
+            font-size: 3rem;
+            color: var(--color-ink);
+            text-shadow: 1px 1px var(--color-wood-light);
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--color-wood-medium);
+            margin-bottom: 10px;
+        }
+
+        .decorative-border {
+            height: 3px;
+            background: linear-gradient(to right, 
+                transparent, 
+                var(--color-wood-medium), 
+                transparent
+            );
+            margin: 10px auto;
+            width: 80%;
+        }
+
+        /* --- Authentication Section --- */
+        .auth-section {
+            background: var(--color-parchment-dark);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--color-wood-light);
+        }
+        .google-signin {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        /* New Guest Button Container */
+        .guest-signin {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .user-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .character-name-input {
+            margin-top: 15px;
+        }
+        .name-input-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .name-input-container input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid var(--color-wood-medium);
+            border-radius: 5px;
+            background: var(--color-parchment);
+            font-family: var(--font-body);
+        }
+        .auth-note {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: var(--color-wood-medium);
+        }
+        /* Style for the simplified origin helper */
+        .origin-helper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border: 1px solid var(--color-wood-medium);
+            padding: 8px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+        }
+        .origin-helper code {
+            font-weight: 700;
+            color: var(--color-danger);
+            user-select: all;
+            background: var(--color-parchment-dark);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        /* --- Medieval Button Style --- */
+        .medieval-button {
+            background-color: var(--color-wood-medium);
+            color: var(--color-parchment);
+            border: 2px solid var(--color-wood-dark);
+            padding: 10px 15px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 3px;
+            box-shadow: 2px 2px 0 var(--color-wood-dark);
+            transition: all 0.1s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            position: relative; /* For cooldown */
+            overflow: hidden; /* For cooldown */
+        }
+        .medieval-button:hover {
+            background-color: var(--color-wood-light);
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0 var(--color-wood-dark);
+        }
+        .medieval-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: none;
+        }
+        .medieval-button.disabled,
+        .medieval-button:disabled {
+            background-color: #9e9e9e;
+            color: #ccc;
+            border-color: #7a7a7a;
+            box-shadow: 2px 2px 0 #7a7a7a;
+            cursor: not-allowed;
+        }
+        .medieval-button:disabled:hover {
+            transform: none;
+            box-shadow: 2px 2px 0 #7a7a7a;
+        }
+        .medieval-button.danger-button {
+            background-color: var(--color-danger);
+            border-color: darkred;
+            box-shadow: 2px 2px 0 darkred;
+        }
+        .medieval-button.danger-button:hover {
+            background-color: #c95452;
+        }
+        .medieval-button .button-icon {
+            font-size: 1.2em;
+        }
+        /* Small button variant for copy button */
+        .medieval-button.small-button {
+            padding: 5px 8px;
+            font-size: 0.8rem;
+        }
+        
+        /* --- Cooldown Styles --- */
+        .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateX(100%);
+            pointer-events: none;
+        }
+        .action-button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .cooldown-timer {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-ink);
+            height: 1.2em; /* Reserve space */
+            margin-top: 2px;
+        }
+
+
+        /* --- New Game Body Grid --- */
+        .game-body-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Default to 1 column for mobile */
+            gap: 20px;
+        }
+
+        @media (min-width: 600px) { /* Apply 2-col layout on wider screens */
+            .game-body-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .character-section {
+            border-bottom: none; /* Remove border from character section */
+            padding-bottom: 0;
+            text-align: center;
+        }
+
+        .inventory-section {
+            text-align: center;
+        }
+        .inventory-section h3 {
+            margin-bottom: 10px;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            background: var(--color-parchment-dark);
+            padding: 10px;
+            border-radius: 5px;
+            border: 2px solid var(--color-wood-medium);
+            min-height: 280px; /* Give it some space */
+        }
+
+
+        /* --- Pixel Art Character Section --- */
+        .character-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Grid for character and equipment slots */
+        .character-grid {
+            display: grid;
+            grid-template-columns: 60px 160px 60px;
+            grid-template-rows: 60px 160px 60px;
+            gap: 5px;
+            margin: 15px 0;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #characterCanvas {
+            grid-row: 2;
+            grid-column: 2;
+            background-color: #333; /* Dark background for the canvas */
+            border: 2px solid var(--color-wood-dark);
+            /* Ensure crisp pixels */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 160px;
+            height: 160px;
+        }
+
+        .character-equip-slot {
+            width: 60px;
+            height: 60px;
+            background: var(--color-parchment-dark);
+            border: 2px dashed var(--color-wood-medium);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--color-wood-light);
+            font-size: 2rem; /* Make '?' bigger */
+            font-family: var(--font-title);
+            font-weight: 700;
+        }
+        /* Place slots around the center */
+        .character-equip-slot:nth-child(1) { grid-row: 1; grid-column: 1; }
+        .character-equip-slot:nth-child(2) { grid-row: 1; grid-column: 2; }
+        .character-equip-slot:nth-child(3) { grid-row: 1; grid-column: 3; }
+        .character-equip-slot:nth-child(4) { grid-row: 2; grid-column: 1; }
+        /* Canvas is 5th child */
+        .character-equip-slot:nth-child(6) { grid-row: 2; grid-column: 3; }
+        .character-equip-slot:nth-child(7) { grid-row: 3; grid-column: 1; }
+        .character-equip-slot:nth-child(8) { grid-row: 3; grid-column: 2; }
+        .character-equip-slot:nth-child(9) { grid-row: 3; grid-column: 3; }
+
+
+        .character-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .character-level {
+            font-size: 1rem;
+            color: var(--color-wood-medium);
+        }
+        
+        /* --- Hearts Section --- */
+        .hearts-section {
+            padding-bottom: 10px; /* Less padding than others */
+            border-bottom: none;
+        }
+        #heartsContainer {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        .heart-icon {
+            font-size: 2rem;
+            color: var(--color-heart);
+            text-shadow: 1px 1px var(--color-wood-dark);
+        }
+        .heart-icon.empty {
+            color: var(--color-metal-dark);
+        }
+
+
+        /* --- Stats Section --- */
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5px; /* Add a little padding */
+        }
+        .stat-container {
+            display: grid;
+            grid-template-columns: 50px 1fr 40px; /* icon, bar, value */
+            align-items: center;
+            gap: 10px;
+            position: relative; 
+        }
+        .stat-label {
+            text-align: center; /* Center the icon/text */
+            font-weight: 600;
+            font-size: 1.1rem; /* Good size for 'XP' */
+        }
+        .stat-label.icon-label {
+            font-size: 1.8rem; /* Make icons bigger */
+        }
+        .stat-bar {
+            width: 100%;
+            height: 20px;
+            background-color: var(--color-parchment-dark);
+            border: 2px solid var(--color-wood-medium);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .stat-fill {
+            height: 100%;
+            width: 100%; /* Default */
+            transition: width 0.5s ease-in-out;
+        }
+        .hunger-fill { background-color: var(--color-hunger); }
+        .happiness-fill { background-color: var(--color-happiness); }
+        .xp-fill { background-color: var(--color-xp); }
+        .train-fill { background-color: var(--color-metal-dark); } /* Added for new train bar */
+        .stat-value {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .level-display {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .stat-tooltip {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--color-ink);
+            color: var(--color-parchment);
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 10;
+            width: 200px;
+            text-align: center;
+            margin-top: 5px;
+            pointer-events: none; /* So it doesn't block other hovers */
+        }
+
+        /* --- Actions Section --- */
+        .actions-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* --- Adventure Section --- */
+        .adventure-hint {
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            margin-top: 10px;
+        }
+
+        /* --- Footer --- */
+        .manuscript-footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            color: var(--color-wood-medium);
+        }
+        .illuminated-letter {
+            font-family: var(--font-title);
+            font-size: 3rem;
+            color: var(--color-danger);
+            float: left;
+            margin-right: 5px;
+            line-height: 1;
+        }
+        .footer-text {
+            flex-basis: 100%;
+            font-style: italic;
+        }
+
+        /* --- Modal Styles (Inventory Removed) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none; /* Changed to 'none' by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+            padding: 20px;
+        }
+        .modal-content {
+            background: var(--color-parchment);
+            padding: 20px;
+            border-radius: 5px;
+            border: 5px solid var(--color-wood-dark);
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed var(--color-parchment-dark);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2.5rem;
+            color: var(--color-wood-medium);
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close-btn:hover {
+            color: var(--color-wood-dark);
+        }
+
+        /* --- Inventory Styles (Now on main page) --- */
+        .inventory-items h3 {
+            margin-bottom: 10px;
+        }
+        .inventory-item {
+            width: 60px;
+            height: 60px;
+            background: var(--color-parchment); /* Lighter than grid bg */
+            border: 2px solid var(--color-wood-light);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-size: 1.5rem;
+        }
+        .inventory-item.locked {
+            font-size: 1rem;
+            flex-direction: column;
+            color: var(--color-metal-dark);
+        }
+        .inventory-item.empty { /* Style for empty slots */
+            background: var(--color-parchment-dark);
+            border: 2px dashed var(--color-wood-light);
+        }
+        .item-count {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 3px;
+            padding: 0 3px;
+        }
+        .lock-icon {
+            font-size: 2rem;
+        }
+        .unlock-level {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .item-icon {
+            font-size: 2.5rem;
+        }
+        .item-name {
+            font-size: 0.9rem;
+        }
+
+
+        /* --- Minigame Modal --- */
+        .minigame-content {
+            max-width: 700px; /* Make modal wider */
+        }
+        .minigame-area {
+            position: relative;
+            width: 100%;
+            height: 350px; /* Make taller */
+            background: var(--color-parchment-dark);
+            border: 2px solid var(--color-wood-medium);
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: none; /* Hide default cursor */
+        }
+        /* New UI Overlay */
+        .minigame-ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* 3 equal columns */
+            pointer-events: none; /* Allows clicks to pass through */
+            z-index: 2;
+        }
+        /* General Panel Style */
+        .minigame-panel-time,
+        .minigame-panel-leaderboard,
+        .minigame-panel-score {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            color: var(--color-wood-dark);
+            text-align: center;
+            border-right: 2px dashed var(--color-wood-medium);
+            overflow: hidden;
+        }
+        .minigame-panel-score {
+            border-right: none;
+        }
+        .minigame-ui-overlay .panel-label {
+            font-size: 1.5rem;
+            font-family: var(--font-title);
+        }
+        .minigame-ui-overlay .score-value {
+            font-size: 5rem; /* HUGE */
+            font-family: var(--font-title);
+            line-height: 1;
+        }
+        
+        /* Time Panel */
+        .minigame-panel-time {
+            background: rgba(91, 192, 222, 0.7); /* --color-xp */
+            color: #fff;
+            text-shadow: 1px 1px var(--color-ink);
+        }
+        .minigame-panel-time .time-value {
+            font-size: 3rem;
+            font-family: var(--font-title);
+            line-height: 1;
+            margin: 10px 0;
+        }
+        .timer-bar-container {
+            width: 50%;
+            height: 150px;
+            background: rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        .timer-bar-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%; /* Starts full */
+            background: #fff;
+            /* transition will be set by JS */
+        }
+
+        /* Leaderboard Panel */
+        .minigame-panel-leaderboard {
+            background: rgba(245, 232, 200, 0.8); /* Semi-transparent parchment */
+            justify-content: flex-start;
+        }
+        .minigame-panel-leaderboard h4 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        #minigameHighScoreList {
+            list-style-position: inside;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        #minigameHighScoreList li {
+            border-bottom: 1px solid var(--color-wood-light);
+            padding: 2px 0;
+            text-align: left;
+        }
+        #minigameHighScoreList li strong {
+            color: var(--color-wood-dark);
+        }
+
+        /* Score Panel */
+        .minigame-panel-score {
+            background: rgba(92, 184, 92, 0.7); /* --color-happiness */
+            color: #fff;
+            text-shadow: 1px 1px var(--color-ink);
+        }
+        
+        /* Game Elements */
+        .target {
+            width: 40px;
+            height: 40px;
+            background: red;
+            border: 5px solid white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: top 0.2s, left 0.2s;
+            display: none; /* Hidden until game starts */
+            z-index: 3; /* Above overlay */
+        }
+        .crosshair {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            pointer-events: none; /* Allow clicks to pass through */
+            border: 2px solid var(--color-ink);
+            border-radius: 50%;
+            z-index: 4; /* On top of everything */
+        }
+        .minigame-stats {
+            display: none; /* Replaced by new UI */
+        }
+        #startMinigame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3; /* Above overlay */
+        }
+
+        /* --- Forage Minigame Modal --- */
+        .forage-game-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            background: var(--color-parchment-dark);
+            border-radius: 5px;
+            border: 2px solid var(--color-wood-medium);
+            text-align: center;
+        }
+        #foragePrompt {
+            font-size: 1.5rem;
+            font-family: var(--font-title);
+            color: var(--color-wood-dark);
+        }
+        #forageTarget {
+            font-size: 2.5rem;
+            padding: 20px 30px;
+        }
+
+
+        /* Settings Modal */
+        .settings-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .setting-section {
+            border-bottom: 1px solid var(--color-parchment-dark);
+            padding-bottom: 15px;
+        }
+        .setting-section:last-of-type {
+            border-bottom: none;
+        }
+        .name-setting {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .name-setting input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid var(--color-wood-medium);
+            border-radius: 5px;
+            background: var(--color-parchment);
+            font-family: var(--font-body);
+        }
+        .setting-description {
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            margin-top: 5px;
+        }
+        .setting-item {
+            margin-top: 10px;
+        }
+        .account-info p {
+            margin: 5px 0;
+        }
+        #lastSaved {
+            font-style: italic;
+            color: var(--color-wood-medium);
+        }
+        .account-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        /* Reset Modal */
+        .warning-text {
+            color: var(--color-danger);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
+        .confirmation-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        /* High Score Modal */
+        #highScoreList {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #highScoreList p {
+            font-size: 1.1rem;
+            padding: 5px;
+            border-bottom: 1px dashed var(--color-parchment-dark);
+        }
+        #highScoreList p:last-child {
+            border-bottom: none;
+        }
+        #highScoreList p strong {
+            display: inline-block;
+            min-width: 150px; /* Give name space */
+            color: var(--color-wood-dark);
+        }
+        #highScoreList p .score {
+            display: inline-block;
+            width: 50px;
+            text-align: right;
+            font-weight: 700;
+        }
+        #highScoreList p em {
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            float: right;
+        }
+        #highScoreList .no-scores {
+            font-style: italic;
+            color: var(--color-wood-medium);
+            text-align: center;
+        }
+        
+        /* Custom Message Modal (replaces alert()) */
+        #messageModal .modal-content,
+        #guestMessageModal .modal-content,
+        #starvationModal .modal-content,
+        #deathModal .modal-content {
+            max-width: 350px;
+        }
+        #messageModalText,
+        #guestMessageModalText,
+        #starvationModalText,
+        #deathModalText {
+            font-size: 1.1rem;
+            text-align: center;
+            line-height: 1.5;
+            white-space: pre-wrap; /* Allow \n newlines */
+        }
+        #messageModalCloseBtn,
+        #guestMessageConfirmBtn {
+            margin: 20px auto 0;
+        }
+
+        /* Starvation/Death Modal Buttons */
+        .modal-button-group {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        #deathDiceArea {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            text-align: center;
+            margin-top: 15px;
+            color: var(--color-wood-dark);
+            min-height: 50px;
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="manuscript-container">
+        <!-- Parchment element to apply pulsing -->
+        <div class="parchment" id="parchment">
+            <div class="manuscript-header">
+                <h1 class="title">RogueXP</h1>
+                <p class="subtitle">The First Adventure</p>
+                <div class="decorative-border"></div>
+                <!-- Authentication Section -->
+                <div class="auth-section" id="authSection">
+                    <div class="google-signin" id="googleSignIn">
+                        <div id="g_id_onload"
+                             data-client_id="435254790459-8o6qa9skdt207h6faev4uud3k9r8nns7.apps.googleusercontent.com"
+                             data-callback="handleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                              data-type="standard"
+                              data-size="large"
+                              data-theme="outline"
+                              data-text="sign_in_with"
+                              data-shape="rectangular"
+                              data-logo_alignment="left">
+                        </div>
+                    </div>
+                    <!-- "Play as Guest" Button Moved Here -->
+                    <div class="guest-signin">
+                        <button class="medieval-button" id="guestBtn">
+                            <span class="button-icon">💾</span>
+                            Play as Guest
+                        </button>
+                    </div>
+                    <!-- User info div is now empty, hidden by JS -->
+                    <div class="user-info" id="userInfo" style="display: none;">
+                    </div>
+                    <!-- Character Name Input (shown after first login) -->
+                    <div class="character-name-input" id="characterNameInput" style="display: none;">
+                        <h3>Name Your Knight</h3>
+                        <div class="name-input-container">
+                            <input type="text" id="characterNameField" placeholder="Enter knight's name..." maxlength="20">
+                            <button class="medieval-button" id="saveCharacterName">
+                                <span class="button-icon">💾</span>
+                                Save Name
+                            </button>
+                        </div>
+                    </div>
+                    <div class="auth-note">
+                        <!-- Simplified Debug Helper -->
+                        <div id="originDebug" style="display: none;">
+                            <p style="margin-bottom: 10px; font-weight: 600; font-family: var(--font-title); color: var(--color-wood-dark);">Sign-In Helper:</p>
+                            <div class="origin-helper">
+                                <code id="currentOrigin"></code>
+                                <button class="medieval-button small-button" id="copyOriginBtn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW HEARTS SECTION -->
+            <div class="hearts-section">
+                <div id="heartsContainer">
+                    <!-- Hearts will be populated here by JS -->
+                </div>
+            </div>
+
+            <!-- Stats Section (before new grid) -->
+            <div class="stats-section">
+                <!-- Stats Header -->
+                <div class="stats-header">
+                    <h3>Stats</h3>
+                </div>
+
+                <div class="stat-container" id="hungerStatContainer">
+                    <div class="stat-label icon-label">🍖</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill hunger-fill" id="hungerBar"></div>
+                    </div>
+                    <div class="stat-value" id="hungerValue">60</div>
+                    <!-- Removed info button -->
+                </div>
+                <div class="stat-container" id="happinessStatContainer">
+                    <div class="stat-label icon-label">❤️</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill happiness-fill" id="happinessBar"></div>
+                    </div>
+                    <div class="stat-value" id="happinessValue">100</div>
+                    <!-- Removed info button -->
+                </div>
+                <div class="stat-container" id="xpStatContainer">
+                    <div class="stat-label">XP</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill xp-fill" id="xpBar"></div>
+                    </div>
+                    <div class="stat-value" id="xpValue">0/100</div>
+                    <!-- Removed info button -->
+                </div>
+                <div class="stat-container" id="trainStatContainer">
+                    <div class="stat-label icon-label">⚔️</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill train-fill" id="trainBar"></div>
+                    </div>
+                    <div class="stat-value" id="trainValue">0</div>
+                    <!-- Removed info button -->
+                </div>
+            </div>
+            
+            <!-- NEW 2-COLUMN LAYOUT -->
+            <div class="game-body-grid">
+                <!-- Left Column: Character -->
+                <div class="character-section" id="characterSection">
+                    <div class="character-container">
+                        <div class="character-grid">
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                            <canvas id="characterCanvas" width="160" height="160"></canvas>
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                            <div class="character-equip-slot">?</div>
+                        </div>
+                        <div class="character-name" id="characterNameDisplay">RogueXP</div>
+                        <div class="character-level" id="characterLevel">Level 1</div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Inventory -->
+                <div class="inventory-section">
+                    <h3>Inventory</h3>
+                    <div class="items-grid" id="itemsGrid">
+                        <div class="inventory-item">
+                            <span class="item-icon">🍖</span>
+                            <span class="item-count" id="foodCount">5</span>
+                        </div>
+                        <div class="inventory-item locked" id="itemSlot2">
+                            <span class="lock-icon">🔒</span>
+                            <span class="unlock-level">Level 2</span>
+                        </div>
+                        <div class="inventory-item locked" id="itemSlot3">
+                            <span class="lock-icon">🔒</span>
+                            <span class="unlock-level">Level 4</span>
+                        </div>
+                        <div class="inventory-item empty"></div>
+                        <div class="inventory-item empty"></div>
+                        <div class="inventory-item empty"></div>
+                        <div class="inventory-item empty"></div>
+                        <div class="inventory-item empty"></div>
+                        <div class="inventory-item empty"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="level-section" style="display:none;">
+                <!-- This section is redundant now, character-level is shown -->
+                <div class="level-display">
+                    <span class="level-label">Level:</span>
+                    <span class="level-number" id="levelNumber">1</span>
+                </div>
+            </div>
+
+            <!-- UPDATED ACTIONS SECTION with Cooldowns -->
+            <div class="actions-section" id="actionsSection">
+                <div class="action-button-container">
+                    <button class="medieval-button feed-button" id="feedBtn">
+                        <span class="button-icon">🍖</span>
+                        Feed
+                        <div class="cooldown-overlay"></div>
+                    </button>
+                    <span class="cooldown-timer" id="feedBtnTimer"></span>
+                </div>
+                <div class="action-button-container">
+                    <button class="medieval-button play-button" id="playBtn">
+                        <span class="button-icon">⚔️</span>
+                        Train
+                        <div class="cooldown-overlay"></div>
+                    </button>
+                    <span class="cooldown-timer" id="playBtnTimer"></span>
+                </div>
+                <div class="action-button-container">
+                    <button class="medieval-button" id="forageBtn">
+                        <span class="button-icon">🌿</span>
+                        Forage
+                        <div class="cooldown-overlay"></div>
+                    </button>
+                    <span class="cooldown-timer" id="forageBtnTimer"></span>
+                </div>
+                <div class="action-button-container">
+                    <button class="medieval-button minigame-button" id="minigameBtn" style="display: none;">
+                        <span class="button-icon">🎯</span>
+                        Minigame
+                        <div class="cooldown-overlay"></div>
+                    </button>
+                    <span class="cooldown-timer" id="minigameBtnTimer"></span>
+                </div>
+                <div class="action-button-container">
+                    <button class="medieval-button" id="highScoreBtn" style="display: none;">
+                        <span class="button-icon">🏆</span>
+                        High Scores
+                        <!-- No cooldown needed for this one -->
+                    </button>
+                    <span class="cooldown-timer"></span> <!-- Empty span for alignment -->
+                </div>
+            </div>
+            <!-- END UPDATED ACTIONS SECTION -->
+
+            <div class="adventure-section">
+                <button class="medieval-button adventure-button disabled" id="adventureBtn" disabled>
+                    <span class="button-icon">🗡️</span>
+                    Go on Adventure
+                </button>
+                <div class="adventure-hint" id="adventureHint">
+                    Reach Level 10 to unlock adventures
+                </div>
+            </div>
+
+            <div class="manuscript-footer">
+                <div class="illuminated-letter">R</div>
+                <p class="footer-text">In the ancient halls where stone guardians watch...</p>
+                <!-- Guest Button Removed From Here -->
+                <button class="medieval-button" id="accountBtn" style="display: none;">
+                    <span class="button-icon">⚙️</span>
+                    Account
+                </button>
+                <button class="medieval-button reset-button" id="resetBtn" style="display: none;">
+                    <span class="button-icon">🔄</span>
+                    Reset Progress
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Minigame Modal -->
+    <div class="modal-overlay" id="minigameModal" style="display: none;">
+        <div class="modal-content minigame-content">
+            <div class="modal-header">
+                <h2>Target Practice</h2>
+                <button class="close-btn" id="closeMinigame">&times;</button>
+            </div>
+            <!-- Minigame Area Updated -->
+            <div class="minigame-area" id="minigameArea">
+                <!-- UI Overlay -->
+                <div class="minigame-ui-overlay">
+                    <!-- Left: Time -->
+                    <div class="minigame-panel-time">
+                        <div class="panel-label">Time</div>
+                        <div class="time-value" id="minigameTime">15s</div>
+                        <div class="timer-bar-container">
+                            <div class="timer-bar-fill" id="minigameTimerBar"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Middle: Leaderboard -->
+                    <div class="minigame-panel-leaderboard">
+                        <h4>High Scores</h4>
+                        <ol id="minigameHighScoreList">
+                            <!-- Populated by JS -->
+                        </ol>
+                    </div>
+
+                    <!-- Right: Score -->
+                    <div class="minigame-panel-score">
+                        <div class="panel-label">Score</div>
+                        <div class="score-value" id="minigameScoreDisplay">0</div>
+                    </div>
+                </div>
+                
+                <!-- Game Elements (underneath overlay) -->
+                <div class="target" id="target"></div>
+                <div class="crosshair" id="crosshair"></div>
+                <!-- This is now redundant -->
+                <div class="minigame-stats" style="display: none;">
+                    <div class="score">Score: <span id="minigameScore">0</span></div> <!-- Keep for logic -->
+                </div>
+                <button class="medieval-button" id="startMinigame">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW Forage Minigame Modal -->
+    <div class="modal-overlay" id="forageModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Foraging...</h2>
+                <button class="close-btn" id="closeForageModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="forage-game-area" id="forageGameArea">
+                    <p id="foragePrompt">Get Ready...</p>
+                    <button class="medieval-button" id="forageTarget" style="display: none;">
+                        <span class="button-icon">🌿</span>
+                        FORAGE NOW!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn" id="closeSettings">&times;</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-section">
+                    <h3>Character Name</h3>
+                    <div class="name-setting">
+                        <input type="text" id="settingsCharacterName" placeholder="Enter new name..." maxlength="20">
+                        <button class="medieval-button" id="updateCharacterName">
+                            <span class="button-icon">✏️</span>
+                            Update Name
+                        </button>
+                    </div>
+                    <p class="setting-description">Change your knight's name</p>
+                </div>
+                <div class="setting-section">
+                    <h3>Game Settings</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="soundEnabled" checked>
+                            Enable Sound Effects
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="notificationsEnabled" checked>
+                            Enable Notifications
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-section">
+                    <h3>Account</h3>
+                    <div class="account-info">
+                        <p><strong>Logged in as:</strong> <span id="settingsUserName"></span></p>
+                        <p><strong>Progress saved:</strong> <span id="lastSaved">Never</span></p>
+                    </div>
+                    <!-- Moved account buttons here -->
+                    <div class="account-actions">
+                        <button class="medieval-button switch-account-btn" id="switchAccountBtn">
+                            <span class="button-icon">🔄</span>
+                            Switch Account
+                        </button>
+                        <button class="medieval-button logout-btn" id="logoutBtn">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reset Confirmation Modal -->
+    <div class="modal-overlay" id="resetModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reset Progress</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you absolutely sure you want to reset all progress?</p>
+                <p class="warning-text">This action cannot be undone!</p>
+                <div class="confirmation-buttons">
+                    <button class="medieval-button danger-button" id="confirmReset">Yes, Reset Everything</button>
+                    <button class="medieval-button" id="cancelReset">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- High Score Modal -->
+    <div class="modal-overlay" id="highScoreModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>High Scores - Target Practice</h2>
+                <button class="close-btn" id="closeHighScoreModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="highScoreList">
+                    <!-- Scores will be populated here by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Message Modal (replaces alert()) -->
+    <div class="modal-overlay" id="messageModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p id="messageModalText">This is a message.</p>
+                <button class="medieval-button" id="messageModalCloseBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW Guest Message Modal -->
+    <div class="modal-overlay" id="guestMessageModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p id="guestMessageModalText">
+                    You are playing as a guest. Your progress will be saved to this browser, but not to an account.
+                    If you clear your browser data, your progress will be lost.
+                </p>
+                <button class="medieval-button" id="guestMessageConfirmBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW Starvation Warning Modal -->
+    <div class="modal-overlay" id="starvationModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: var(--color-danger);">Starvation Warning!</h2>
+            </div>
+            <div class="modal-body">
+                <p id="starvationModalText">
+                    Your knight's hunger is at 5%! They will soon begin to lose hearts.
+                    Are you OK with letting your knight die?
+                </p>
+                <div class="modal-button-group">
+                    <button class="medieval-button" id="starveFeedBtn">
+                        <span class="button-icon">🍖</span>
+                        Feed!
+                    </button>
+                    <button class="medieval-button danger-button" id="starveAcceptBtn">
+                        Accept Fate...
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW Death Modal -->
+    <div class="modal-overlay" id="deathModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #333;">A Fateful Encounter</h2>
+            </div>
+            <div class="modal-body">
+                <p id="deathModalText">
+                    Your knight has fallen... but Death offers you a chance.
+                    "One game of dice," he rattles, "for your soul. Win, and you return. Lose, and you are mine."
+                </p>
+                <div id="deathDiceArea"></div>
+                <div class="modal-button-group">
+                    <button class="medieval-button" id="rollDiceBtn">
+                        <span class="button-icon">🎲</span>
+                        Roll the Dice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 
+      START of INLINED JAVASCRIPT 
+    -->
+    <script>
+        // Function to parse JWT tokens (for Google Sign-In)
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Error parsing JWT: ", e);
+                return null;
+            }
+        }
+
+        // --- Google Auth Handler ---
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+            const userData = parseJwt(response.credential);
+            if (userData) {
+                console.log("Decoded User Data: ", userData);
+                // Save user data to local storage
+                localStorage.setItem('rogueXP_User', JSON.stringify({
+                    name: userData.name,
+                    email: userData.email,
+                    picture: userData.picture
+                }));
+                
+                // --- Update UI for login ---
+                document.getElementById('googleSignIn').style.display = 'none';
+                document.getElementById('guestBtn').style.display = 'none'; // Hide guest btn
+                document.getElementById('userInfo').style.display = 'none'; // No longer used
+                document.getElementById('settingsUserName').textContent = userData.email;
+                
+                // Show footer buttons
+                document.getElementById('accountBtn').style.display = 'inline-flex';
+                document.getElementById('resetBtn').style.display = 'inline-flex';
+                
+                // Hide the origin debug helper on successful login
+                document.getElementById('originDebug').style.display = 'none';
+                
+                // Check if a character name is set. If not, prompt for one.
+                const saveKey = `rogueXP_Save_${userData.email}`;
+                const savedState = JSON.parse(localStorage.getItem(saveKey));
+                if (!savedState || !savedState.characterName) {
+                    document.getElementById('characterNameInput').style.display = 'block';
+                } else {
+                    // If we have a name, load the game
+                    document.dispatchEvent(new Event('userLoggedIn'));
+                }
+            }
+        }
+
+
+        // --- Main Game Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Origin Mismatch Debugger ---
+            const originDebug = document.getElementById('originDebug');
+            const currentOrigin = document.getElementById('currentOrigin');
+            const copyOriginBtn = document.getElementById('copyOriginBtn');
+            
+            if (window.location.origin && window.location.origin !== 'null' && window.location.origin !== 'file://') {
+                currentOrigin.textContent = window.location.origin;
+                originDebug.style.display = 'block';
+            } else {
+                currentOrigin.textContent = 'file:/// paths are not supported. Use a local server.';
+                originDebug.style.display = 'block';
+                copyOriginBtn.style.display = 'none';
+            }
+
+            copyOriginBtn.addEventListener('click', () => {
+                const originText = currentOrigin.textContent;
+                const textArea = document.createElement('textarea');
+                textArea.value = originText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy'); 
+                    copyOriginBtn.textContent = 'Copied!';
+                    setTimeout(() => copyOriginBtn.textContent = 'Copy', 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+                document.body.removeChild(textArea);
+            });
+
+
+            // --- DOM Element References ---
+            const dom = {
+                // Main container
+                parchment: document.getElementById('parchment'),
+
+                // Hearts
+                heartsContainer: document.getElementById('heartsContainer'),
+
+                // Stats
+                hungerBar: document.getElementById('hungerBar'),
+                hungerValue: document.getElementById('hungerValue'),
+                happinessBar: document.getElementById('happinessBar'),
+                happinessValue: document.getElementById('happinessValue'),
+                xpBar: document.getElementById('xpBar'),
+                xpValue: document.getElementById('xpValue'),
+                levelNumber: document.getElementById('levelNumber'),
+                trainBarContainer: document.getElementById('trainBarContainer'), 
+                trainBar: document.getElementById('trainBar'), 
+                trainValue: document.getElementById('trainValue'), 
+                characterLevel: document.getElementById('characterLevel'),
+                characterNameDisplay: document.getElementById('characterNameDisplay'),
+                
+                // Action Buttons
+                actionsSection: document.getElementById('actionsSection'), // For game over
+                feedBtn: document.getElementById('feedBtn'),
+                playBtn: document.getElementById('playBtn'),
+                forageBtn: document.getElementById('forageBtn'), 
+                minigameBtn: document.getElementById('minigameBtn'),
+                highScoreBtn: document.getElementById('highScoreBtn'),
+                adventureBtn: document.getElementById('adventureBtn'),
+                adventureHint: document.getElementById('adventureHint'),
+                resetBtn: document.getElementById('resetBtn'),
+
+                // Cooldown Timers
+                feedBtnTimer: document.getElementById('feedBtnTimer'),
+                playBtnTimer: document.getElementById('playBtnTimer'),
+                forageBtnTimer: document.getElementById('forageBtnTimer'),
+                minigameBtnTimer: document.getElementById('minigameBtnTimer'),
+
+                // Auth UI
+                authSection: document.getElementById('authSection'),
+                googleSignIn: document.getElementById('googleSignIn'),
+                userInfo: document.getElementById('userInfo'),
+                logoutBtn: document.getElementById('logoutBtn'),
+                switchAccountBtn: document.getElementById('switchAccountBtn'),
+                accountBtn: document.getElementById('accountBtn'), 
+                characterNameInput: document.getElementById('characterNameInput'),
+                characterNameField: document.getElementById('characterNameField'),
+                saveCharacterName: document.getElementById('saveCharacterName'),
+                guestBtn: document.getElementById('guestBtn'), // Renamed from offlineBtn
+                
+                // Modals
+                minigameModal: document.getElementById('minigameModal'),
+                closeMinigame: document.getElementById('closeMinigame'),
+                forageModal: document.getElementById('forageModal'), // New
+                closeForageModal: document.getElementById('closeForageModal'), // New
+                settingsModal: document.getElementById('settingsModal'),
+                closeSettings: document.getElementById('closeSettings'),
+                resetModal: document.getElementById('resetModal'),
+                confirmReset: document.getElementById('confirmReset'),
+                cancelReset: document.getElementById('cancelReset'),
+                highScoreModal: document.getElementById('highScoreModal'),
+                closeHighScoreModal: document.getElementById('closeHighScoreModal'),
+                highScoreList: document.getElementById('highScoreList'),
+                messageModal: document.getElementById('messageModal'),
+                messageModalText: document.getElementById('messageModalText'),
+                messageModalCloseBtn: document.getElementById('messageModalCloseBtn'),
+                guestMessageModal: document.getElementById('guestMessageModal'), // New
+                guestMessageConfirmBtn: document.getElementById('guestMessageConfirmBtn'), // New
+                starvationModal: document.getElementById('starvationModal'), // New
+                starveFeedBtn: document.getElementById('starveFeedBtn'), // New
+                starveAcceptBtn: document.getElementById('starveAcceptBtn'), // New
+                deathModal: document.getElementById('deathModal'), // New
+                rollDiceBtn: document.getElementById('rollDiceBtn'), // New
+                deathDiceArea: document.getElementById('deathDiceArea'), // New
+
+                // Inventory (Now on main page)
+                foodCount: document.getElementById('foodCount'),
+                itemSlot2: document.getElementById('itemSlot2'),
+                itemSlot3: document.getElementById('itemSlot3'),
+
+                // Settings
+                settingsCharacterName: document.getElementById('settingsCharacterName'),
+                updateCharacterName: document.getElementById('updateCharacterName'),
+                settingsUserName: document.getElementById('settingsUserName'),
+                lastSaved: document.getElementById('lastSaved'),
+
+                // Minigame
+                minigameArea: document.getElementById('minigameArea'),
+                target: document.getElementById('target'),
+                crosshair: document.getElementById('crosshair'),
+                minigameScore: document.getElementById('minigameScore'), // Hidden one
+                minigameScoreDisplay: document.getElementById('minigameScoreDisplay'), // Visible one
+                minigameTime: document.getElementById('minigameTime'),
+                minigameTimerBar: document.getElementById('minigameTimerBar'), // New
+                startMinigame: document.getElementById('startMinigame'),
+                minigameHighScoreList: document.getElementById('minigameHighScoreList'), // New
+
+                // Forage Minigame
+                forageGameArea: document.getElementById('forageGameArea'), // New
+                foragePrompt: document.getElementById('foragePrompt'), // New
+                forageTarget: document.getElementById('forageTarget'), // New
+
+                // Character
+                characterCanvas: document.getElementById('characterCanvas'),
+            };
+
+            // --- Game State ---
+            const XP_PER_LEVEL = 100;
+            const BASE_HUNGER_DECAY = 1; 
+            const HAPPINESS_DECAY = 1; // Base decay, will be applied 3x slower
+            const TICK_RATE = 5000; // 5 seconds
+            const TRAIN_GAIN = 25;
+            const TRAIN_DECAY = 2; // Decay per tick
+            const TRAIN_MULTIPLIER = 2; // Hunger/Happiness decay 2x as fast
+            const HAPPINESS_TICK_DIVISOR = 3; // Makes happiness decay 3x slower
+            const HEART_TICK_DIVISOR = 4; // Takes 4 ticks (20s) to lose 1 heart
+
+            // Cooldown Constants
+            const FEED_COOLDOWN = 3000;
+            const TRAIN_COOLDOWN = 5000;
+            const FORAGE_COOLDOWN = 10000;
+            const MINIGAME_COOLDOWN = 30000;
+            const MINIGAME_DURATION_MS = 15000; // 15 seconds
+
+            const VIKING_NAMES = ['Floki', 'Ragnar', 'Bjorn', 'Lagertha', 'Ivar', 'Ubbe', 'Sigurd', 'Halfdan', 'Harald', 'Erik'];
+
+            let gameState = {
+                characterName: "RogueXP",
+                hunger: 60, 
+                happiness: 100,
+                xp: 0,
+                level: 1,
+                food: 5,
+                train: 0, 
+                hearts: 3, 
+                maxHearts: 3, 
+                happinessTickCounter: 0, 
+                heartTickCounter: 0, 
+                lastTick: Date.now(),
+                highScores: {
+                    targetPractice: []
+                },
+                // Cooldown Timers
+                nextFeedTime: 0,
+                nextTrainTime: 0,
+                nextForageTime: 0,
+                nextMinigameTime: 0,
+                // New state flags
+                hasUsedRevive: false,
+                hasSeenStarveWarning: false
+            };
+
+            let gameLoopInterval = null;
+            let currentMode = 'offline'; // 'offline' or 'online'
+            let ctx = null; // For character canvas
+            let isGameLoaded = false; // Flag to prevent auto-start
+            let slowdownFactor = 1.0; // Replaces isGameSlowed
+            
+            // Forage minigame state
+            let forageGameTimer = null;
+            let forageStartTime = 0;
+            let forageTargetClicked = false;
+
+
+            // --- Page Visibility (Pause Game) ---
+            document.addEventListener('visibilitychange', () => {
+                if (!isGameLoaded) return; // Don't do anything if game isn't running
+
+                if (document.hidden) {
+                    // Tab became hidden - PAUSE
+                    console.log("Tab hidden, pausing game.");
+                    clearInterval(gameLoopInterval);
+                    gameLoopInterval = null;
+                    // Also clear any pending forage game
+                    if (forageGameTimer) {
+                        clearTimeout(forageGameTimer);
+                        forageGameTimer = null;
+                        dom.forageModal.style.display = 'none';
+                        slowdownFactor = 1.0; // Ensure game resumes normally
+                    }
+                } else {
+                    // Tab became visible - RESUME
+                    console.log("Tab visible, resuming game.");
+                    // Reset lastTick to *now* to prevent "catch-up" depletion
+                    gameState.lastTick = Date.now();
+                    startGameLoop(); // This will restart the loop
+                }
+            });
+
+            // --- Game Save/Load (using localStorage) ---
+            function getSaveKey() {
+                const userItem = localStorage.getItem('rogueXP_User');
+                if (currentMode === 'online' && userItem) {
+                    try {
+                        return `rogueXP_Save_${JSON.parse(userItem).email}`;
+                    } catch (e) {
+                        console.error("Error parsing user data, defaulting to offline save.", e);
+                        currentMode = 'offline';
+                        return 'rogueXP_Save_Offline';
+                    }
+                } else {
+                    return 'rogueXP_Save_Offline';
+                }
+            }
+
+            function saveGame() {
+                try {
+                    localStorage.setItem(getSaveKey(), JSON.stringify(gameState));
+                    dom.lastSaved.textContent = new Date().toLocaleTimeString();
+                } catch (e) {
+                    console.error("Could not save game: ", e);
+                }
+            }
+
+            function loadGame() {
+                let savedState;
+                const user = localStorage.getItem('rogueXP_User');
+                if (user) {
+                    currentMode = 'online';
+                    const userData = JSON.parse(user);
+                    
+                    // Update UI for logged-in state
+                    dom.googleSignIn.style.display = 'none';
+                    dom.guestBtn.style.display = 'none';
+                    dom.userInfo.style.display = 'none';
+                    dom.settingsUserName.textContent = userData.email;
+                    dom.accountBtn.style.display = 'inline-flex';
+                    dom.resetBtn.style.display = 'inline-flex';
+
+                } else {
+                    currentMode = 'offline';
+                    // This case is handled by guestBtn click,
+                    // but as a fallback, ensure UI is correct
+                    dom.accountBtn.style.display = 'inline-flex';
+                    dom.resetBtn.style.display = 'inline-flex';
+                }
+
+                savedState = localStorage.getItem(getSaveKey());
+
+                if (savedState) {
+                    const parsedState = JSON.parse(savedState);
+                    
+                    // Default values for a new game state
+                    const defaultState = {
+                        characterName: "RogueXP",
+                        hunger: 60,
+                        happiness: 100,
+                        xp: 0,
+                        level: 1,
+                        food: 5,
+                        train: 0, 
+                        hearts: 3, 
+                        maxHearts: 3, 
+                        happinessTickCounter: 0, 
+                        heartTickCounter: 0, 
+                        lastTick: Date.now(),
+                        highScores: {
+                            targetPractice: []
+                        },
+                        nextFeedTime: 0,
+                        nextTrainTime: 0,
+                        nextForageTime: 0,
+                        nextMinigameTime: 0,
+                        hasUsedRevive: false,
+                        hasSeenStarveWarning: false
+                    };
+
+                    // Ensure new properties exist
+                    gameState = {
+                        ...defaultState, // Default new values
+                        ...parsedState, // Overwrite with saved values
+                        // Ensure counters are reset on load
+                        happinessTickCounter: 0, 
+                        heartTickCounter: 0
+                    };
+                    console.log("Game Loaded for " + getSaveKey(), gameState);
+
+                    if (!gameState.highScores) {
+                        gameState.highScores = { targetPractice: [] };
+                    }
+                } else {
+                    // No save state, use defaults
+                    gameState.hunger = 60; // Ensure new game starts with 60 hunger
+                    if(currentMode === 'online') {
+                        dom.characterNameInput.style.display = 'block';
+                    } else {
+                        // Guest mode, just use defaults
+                        dom.characterNameInput.style.display = 'none';
+                    }
+                }
+                
+                isGameLoaded = true; // Enable game loop
+                applyOfflineProgress();
+                startGameLoop();
+                gameAnimationLoop(); // Start the 60fps loop for timers
+                updateUI(); // Full UI update
+
+                // Check for game over state *after* applying progress
+                if (gameState.hearts <= 0) {
+                    gameOver();
+                }
+            }
+            
+            function applyOfflineProgress() {
+                const now = Date.now();
+                const timePassed = now - (gameState.lastTick || now);
+                let ticksPassed = Math.floor(timePassed / TICK_RATE);
+
+                if (ticksPassed > 0) {
+                    console.log(`Applying offline progress for ${ticksPassed} ticks...`);
+                    
+                    for (let i = 0; i < ticksPassed; i++) {
+                        
+                        // Passive XP for training
+                        let xpGain = 0;
+                        if (gameState.train === 100) {
+                            xpGain = (gameState.hunger === 100) ? 2 : 1;
+                        }
+                        gameState.xp += xpGain; 
+
+                        const decayMultiplier = (gameState.train > 0) ? TRAIN_MULTIPLIER : 1;
+                        const currentHungerDecay = BASE_HUNGER_DECAY + Math.floor(gameState.level / 2); 
+                        
+                        if (gameState.hunger > 0) {
+                            gameState.hunger -= (currentHungerDecay * decayMultiplier); 
+                        }
+
+                        // Happiness (3x slower)
+                        gameState.happinessTickCounter++;
+                        if (gameState.happinessTickCounter >= HAPPINESS_TICK_DIVISOR) {
+                            if (gameState.happiness > 0) {
+                                gameState.happiness -= (HAPPINESS_DECAY * decayMultiplier);
+                            }
+                            gameState.happinessTickCounter = 0;
+                        }
+
+                        // Hearts
+                        // Use Math.floor on checks to handle floating point happiness
+                        if (gameState.hunger <= 0 && Math.floor(gameState.happiness) <= 0) {
+                            gameState.heartTickCounter++;
+                            if (gameState.heartTickCounter >= HEART_TICK_DIVISOR) {
+                                gameState.hearts -= 1;
+                                gameState.heartTickCounter = 0;
+                                if (gameState.hearts <= 0) {
+                                    break; // Stop simulating if dead
+                                }
+                            }
+                        }
+
+                        if (gameState.train > 0) {
+                            gameState.train -= TRAIN_DECAY;
+                        }
+                    }
+                    // Final check for XP level up after loop
+                    const xpForLevel = (gameState.level * XP_PER_LEVEL);
+                    if (gameState.xp >= xpForLevel) {
+                         levelUp(xpForLevel); // Now it's safe to show message
+                    }
+
+                    gameState.hunger = Math.max(0, Math.floor(gameState.hunger));
+                    gameState.happiness = Math.max(0, Math.floor(gameState.happiness));
+                    gameState.train = Math.max(0, Math.floor(gameState.train));
+                    gameState.hearts = Math.max(0, gameState.hearts);
+                    gameState.xp = Math.floor(gameState.xp); // Floor XP after offline prog
+
+                    gameState.lastTick = now;
+                    saveGame(); 
+                }
+            }
+
+            function resetGame() {
+                try {
+                    localStorage.removeItem(getSaveKey());
+                    if (currentMode === 'online') {
+                         localStorage.removeItem('rogueXP_User');
+                    }
+                    console.log("Game Reset for " + getSaveKey());
+                } catch (e) {
+                    console.error("Could not reset game: ", e);
+                }
+                window.location.reload();
+            }
+
+            // --- UI Update Function ---
+            function updateUI() {
+                // Hearts
+                drawHearts();
+
+                // Stats
+                dom.hungerBar.style.width = `${gameState.hunger}%`; // CSS handles floats
+                dom.hungerValue.textContent = Math.floor(gameState.hunger); // Floor for display
+                dom.happinessBar.style.width = `${gameState.happiness}%`;
+                dom.happinessValue.textContent = Math.floor(gameState.happiness);
+                
+                const xpForLevel = (gameState.level * XP_PER_LEVEL);
+                const xpPercent = (gameState.xp / xpForLevel) * 100;
+                dom.xpBar.style.width = `${xpPercent}%`;
+                dom.xpValue.textContent = `${Math.floor(gameState.xp)}/${xpForLevel}`; // Floor XP
+                
+                dom.trainBar.style.width = `${gameState.train}%`;
+                dom.trainValue.textContent = Math.floor(gameState.train); // Floor train
+                
+                dom.levelNumber.textContent = gameState.level;
+                dom.characterLevel.textContent = `Level ${gameState.level}`;
+                dom.characterNameDisplay.textContent = gameState.characterName;
+                
+                // Inventory
+                dom.foodCount.textContent = gameState.food;
+                
+                drawPixelCharacter();
+                updateUnlocks();
+            }
+            
+            function updateUnlocks() {
+                if (gameState.level >= 10) {
+                    dom.adventureBtn.disabled = false;
+                    dom.adventureBtn.classList.remove('disabled');
+                    dom.adventureHint.style.display = 'none';
+                } else {
+                    dom.adventureBtn.disabled = true;
+                    dom.adventureBtn.classList.add('disabled');
+                    dom.adventureHint.style.display = 'block';
+                    dom.adventureHint.textContent = `Reach Level ${10} to unlock adventures`;
+                }
+
+                // Inventory Slots (now on main page)
+                updateSlotLock(dom.itemSlot2, 2);
+                updateSlotLock(dom.itemSlot3, 4);
+
+                // Action Buttons
+                const minigameUnlocked = gameState.level >= 2;
+                dom.minigameBtn.style.display = minigameUnlocked ? 'inline-flex' : 'none';
+                dom.highScoreBtn.style.display = minigameUnlocked ? 'inline-flex' : 'none';
+
+                // Forage Button display is now handled by cooldown loop
+            }
+            
+            function updateSlotLock(element, requiredLevel) {
+                if (gameState.level >= requiredLevel) {
+                    element.classList.remove('locked');
+                    element.innerHTML = 'Empty'; // Or show item when implemented
+                    element.classList.add('empty');
+                } else {
+                    element.classList.add('locked');
+                    element.classList.remove('empty');
+                    element.innerHTML = `<span class="lock-icon">🔒</span><span class="unlock-level">Level ${requiredLevel}</span>`;
+                }
+            }
+
+            // --- Character Drawing ---
+            function drawPixelCharacter() {
+                if (!ctx) {
+                    ctx = dom.characterCanvas.getContext('2d');
+                }
+                ctx.imageSmoothingEnabled = false;
+
+                const canvasSize = dom.characterCanvas.width; // 160
+                const gridSize = 32; 
+                const pixelScale = canvasSize / gridSize; // 5
+                
+                const charMap = [
+                    "  RR  ",
+                    " RRRR ",
+                    "  RR  ",
+                    " BBB  ",
+                    "BBBBBB",
+                    " BBB  ",
+                    " G  G ",
+                    " G  G "
+                ];
+                const colors = {
+                    'R': '#d9534f', // Red (plume)
+                    'B': '#a8a8a8', // Blue (armor)
+                    'G': '#7a5a3f'  // Gray (legs)
+                };
+
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                const startGridX = Math.floor((gridSize - charMap[0].length) / 2); // 13
+                const startGridY = Math.floor((gridSize - charMap.length) / 2);   // 12
+
+                for (let y = 0; y < charMap.length; y++) {
+                    for (let x = 0; x < charMap[y].length; x++) {
+                        const char = charMap[y][x];
+                        if (colors[char]) {
+                            ctx.fillStyle = colors[char];
+                            ctx.fillRect(
+                                (startGridX + x) * pixelScale, 
+                                (startGridY + y) * pixelScale, 
+                                pixelScale, 
+                                pixelScale
+                            );
+                        }
+                    }
+                }
+            }
+            
+            // --- New Hearts Function ---
+            function drawHearts() {
+                dom.heartsContainer.innerHTML = '';
+                for (let i = 0; i < gameState.maxHearts; i++) {
+                    const heart = document.createElement('span');
+                    heart.classList.add('heart-icon');
+                    if (i < gameState.hearts) {
+                        heart.textContent = '❤️';
+                    } else {
+                        heart.textContent = '🤍';
+                        heart.classList.add('empty');
+                    }
+                    dom.heartsContainer.appendChild(heart);
+                }
+            }
+
+
+            // --- Game Loop ---
+            function gameTick() {
+                applyTick(slowdownFactor);
+                gameState.lastTick = Date.now();
+                updateUI();
+                saveGame();
+            }
+
+            function applyTick(multiplier) {
+                if (gameState.hearts <= 0) return;
+
+                // --- Hunger Warning Pulse ---
+                if (gameState.hunger < 20) {
+                    dom.parchment.classList.add('pulsing');
+                } else {
+                    dom.parchment.classList.remove('pulsing');
+                }
+
+                // --- Starvation Modal Check ---
+                if (gameState.hunger <= 5 && !gameState.hasSeenStarveWarning && slowdownFactor === 1) {
+                    slowdownFactor = 0.05; // Slow time 20x
+                    gameState.hasSeenStarveWarning = true;
+                    dom.starvationModal.style.display = 'flex';
+                }
+
+                // --- Passive XP ---
+                let xpGain = 0;
+                if (gameState.train === 100) {
+                    xpGain = (Math.floor(gameState.hunger) === 100) ? 2 : 1; // 2x XP
+                }
+                addXp(xpGain * multiplier);
+
+                // --- Stat Decay ---
+                const decayMultiplier = (gameState.train > 0) ? TRAIN_MULTIPLIER : 1;
+                const currentHungerDecay = BASE_HUNGER_DECAY + Math.floor(gameState.level / 2); 
+                
+                if (gameState.hunger > 0) {
+                    gameState.hunger -= (currentHungerDecay * decayMultiplier * multiplier); 
+                }
+
+                // Happiness (3x slower)
+                gameState.happinessTickCounter += multiplier;
+                if (gameState.happinessTickCounter >= HAPPINESS_TICK_DIVISOR) {
+                    if (gameState.happiness > 0) {
+                        gameState.happiness -= (HAPPINESS_DECAY * decayMultiplier);
+                    }
+                    gameState.happinessTickCounter -= HAPPINESS_TICK_DIVISOR; // Subtract, don't reset to 0
+                }
+
+                // Hearts
+                if (gameState.hunger <= 0 && Math.floor(gameState.happiness) <= 0) {
+                    gameState.heartTickCounter += multiplier;
+                    if (gameState.heartTickCounter >= HEART_TICK_DIVISOR) {
+                        gameState.hearts = Math.max(0, gameState.hearts - 1);
+                        gameState.heartTickCounter -= HEART_TICK_DIVISOR; // Subtract
+                        drawHearts(); 
+                        if (gameState.hearts <= 0) {
+                            gameOver();
+                        }
+                    }
+                } else {
+                    gameState.heartTickCounter = 0; 
+                }
+
+                if (gameState.train > 0) {
+                    gameState.train -= (TRAIN_DECAY * multiplier);
+                }
+
+                // --- Clamp values ---
+                gameState.hunger = Math.max(0, gameState.hunger);
+                gameState.happiness = Math.max(0, gameState.happiness);
+                gameState.train = Math.max(0, gameState.train);
+            }
+
+            function startGameLoop() {
+                if (gameLoopInterval) {
+                    clearInterval(gameLoopInterval);
+                }
+                // Only start loop if page is active
+                if (!document.hidden && isGameLoaded) {
+                    gameLoopInterval = setInterval(gameTick, TICK_RATE);
+                }
+            }
+
+            // --- Game Over ---
+            function gameOver() {
+                console.log("GAME OVER");
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = null;
+                slowdownFactor = 1.0; // Reset time
+
+                if (gameState.hasUsedRevive) {
+                    // Permanent Death
+                    showMessage("You have fallen again... This time, Death is not so generous. Your adventure ends here. Reset to try again.");
+                    // Disable all action buttons
+                    dom.actionsSection.querySelectorAll('.medieval-button').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.add('disabled');
+                    });
+                    dom.adventureBtn.disabled = true;
+                    dom.adventureBtn.classList.add('disabled');
+                } else {
+                    // First Death - Show Revive Modal
+                    dom.deathDiceArea.innerHTML = ''; // Clear dice area
+                    dom.rollDiceBtn.disabled = false; // Enable button
+                    dom.deathModal.style.display = 'flex';
+                }
+            }
+
+            // --- Core Game Actions ---
+            function feed() {
+                const now = Date.now();
+                if (now < gameState.nextFeedTime) return; // Cooldown active
+
+                console.log("FEED ACTION"); 
+                if (gameState.food > 0 && gameState.hunger < 100) {
+                    gameState.food--;
+                    // Food is less effective at higher levels
+                    const foodValue = Math.max(5, 20 - Math.floor(gameState.level / 3));
+                    gameState.hunger = Math.min(100, gameState.hunger + foodValue);
+                    
+                    // If we fed past 5, reset the warning flag
+                    if (gameState.hunger > 5) {
+                        gameState.hasSeenStarveWarning = false;
+                    }
+
+                    addXp(2);
+                    
+                    // Start cooldown
+                    gameState.nextFeedTime = now + FEED_COOLDOWN;
+                    // triggerCooldownAnimation(dom.feedBtn, FEED_COOLDOWN); // Handled by loop
+                    
+                    updateUI();
+                } else if (gameState.food === 0) {
+                    showMessage("You are out of food!");
+                }
+            }
+
+            // --- FORAGE MINIGAME ---
+            function forage() {
+                const now = Date.now();
+                if (now < gameState.nextForageTime) return; // Cooldown active
+
+                console.log("FORAGE ACTION");
+                if (gameState.hunger < 5) {
+                    showMessage("Your knight is too hungry to forage.");
+                    return;
+                }
+
+                // Cost to forage
+                gameState.hunger = Math.max(0, gameState.hunger - 5);
+                updateUI();
+                
+                // Start cooldown
+                gameState.nextForageTime = now + FORAGE_COOLDOWN;
+                // triggerCooldownAnimation(dom.forageBtn, FORAGE_COOLDOWN); // Now handled by loop
+
+                // SLOW GAME
+                slowdownFactor = 0.01;
+
+                // Reset minigame state
+                forageTargetClicked = false;
+                dom.foragePrompt.textContent = "Get Ready...";
+                dom.forageTarget.style.display = 'none';
+                dom.forageModal.style.display = 'flex';
+
+                // Random delay
+                const delay = Math.random() * 3000 + 2000; // 2-5 seconds
+                
+                forageGameTimer = setTimeout(() => {
+                    if (forageTargetClicked) return; // Clicked too early
+                    dom.foragePrompt.textContent = "";
+                    dom.forageTarget.style.display = 'inline-flex';
+                    forageStartTime = Date.now();
+                    
+                    // Add a timeout for "too slow"
+                    forageGameTimer = setTimeout(() => {
+                        if (forageTargetClicked) return; // Already clicked
+                        endForageGame(0); // Too slow, 0 food
+                    }, 1000); // 1 second to react
+
+                }, delay);
+            }
+
+            function endForageGame(foodFound) {
+                slowdownFactor = 1.0; // RESUME GAME
+                if (forageGameTimer) {
+                    clearTimeout(forageGameTimer);
+                    forageGameTimer = null;
+                }
+                dom.forageModal.style.display = 'none';
+
+                let message = "You found nothing.";
+                let xp = 1;
+                
+                if (foodFound === 3) {
+                    message = "A perfect find! You got 3 food.";
+                    xp = 10;
+                } else if (foodFound === 2) {
+                    message = "Good find. You got 2 food.";
+                    xp = 5;
+                } else if (foodFound === 1) {
+                    message = "You found 1 food.";
+                    xp = 2;
+                }
+
+                gameState.food += foodFound;
+                addXp(xp);
+                showMessage(message);
+                updateUI();
+            }
+            
+            dom.forageTarget.addEventListener('click', () => {
+                if (forageTargetClicked) return;
+                forageTargetClicked = true;
+
+                const reactionTime = Date.now() - forageStartTime;
+                
+                if (reactionTime < 300) {
+                    endForageGame(3); // Great find
+                } else if (reactionTime < 600) {
+                    endForageGame(2); // Good find
+                } else {
+                    endForageGame(1); // Ok find
+                }
+            });
+
+            dom.forageGameArea.addEventListener('mousedown', (e) => {
+                // Clicked before target appeared
+                if (!forageTargetClicked && !forageStartTime && e.target !== dom.forageTarget) {
+                    forageTargetClicked = true; // Prevents target from appearing
+                    endForageGame(0);
+                    showMessage("Too soon! You startled the critters.");
+                }
+            });
+            // --- END FORAGE MINIGAME ---
+
+
+            function train() {
+                const now = Date.now();
+                if (now < gameState.nextTrainTime) return; // Cooldown active
+
+                console.log("TRAIN ACTION"); 
+                if (gameState.hunger > 10) {
+                    gameState.hunger = Math.max(0, gameState.hunger - 5); 
+                    gameState.train = Math.min(100, gameState.train + TRAIN_GAIN);
+                    addXp(10);
+
+                    // Start cooldown
+                    gameState.nextTrainTime = now + TRAIN_COOLDOWN;
+                    // triggerCooldownAnimation(dom.playBtn, TRAIN_COOLDOWN); // Handled by loop
+
+                    updateUI();
+                } else {
+                    showMessage("Your knight is too hungry to train.");
+                }
+            }
+
+            function addXp(amount) {
+                if (gameState.hearts <= 0) return; // No XP if dead
+                gameState.xp += amount;
+                const xpForLevel = (gameState.level * XP_PER_LEVEL);
+                if (gameState.xp >= xpForLevel) {
+                    levelUp(xpForLevel);
+                }
+            }
+
+            function levelUp(xpNeeded) {
+                gameState.level++;
+                gameState.xp -= xpNeeded; // xp can be float
+                showMessage(`Level Up! Your knight is now Level ${gameState.level}.`);
+                console.log("LEVEL UP! Now level " + gameState.level);
+            }
+
+            // --- Modal Logic ---
+            function setupModal(openBtn, closeBtn, modal) {
+                if (openBtn) {
+                    openBtn.addEventListener('click', () => modal.style.display = 'flex');
+                }
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                        
+                        // Handle slow-mo stop
+                        if (modal === dom.forageModal) {
+                            slowdownFactor = 1.0;
+                            if (forageGameTimer) {
+                                clearTimeout(forageGameTimer);
+                                forageGameTimer = null;
+                                showMessage("Foraging cancelled.");
+                            }
+                        } else if (modal === dom.minigameModal) {
+                            if (minigameActive) { // If game is running, end it
+                                endMinigame(true); // true = cancelled
+                            }
+                            slowdownFactor = 1.0;
+                        }
+                    });
+                }
+            }
+            
+            // Modified minigameBtn listener
+            dom.minigameBtn.addEventListener('click', () => {
+                const now = Date.now();
+                if (now < gameState.nextMinigameTime) return; // Cooldown active
+                if (dom.minigameBtn.disabled) return; // Disabled by logic
+
+                slowdownFactor = 0.01; // SLOW GAME
+                populateMinigameLeaderboard(); // Populate modal leaderboard
+                dom.minigameModal.style.display = 'flex';
+                // Cooldown starts when game *begins*
+            });
+
+            setupModal(null, dom.closeMinigame, dom.minigameModal);
+            setupModal(dom.accountBtn, dom.closeSettings, dom.settingsModal); 
+            setupModal(dom.resetBtn, dom.cancelReset, dom.resetModal);
+            setupModal(dom.highScoreBtn, dom.closeHighScoreModal, dom.highScoreModal);
+            setupModal(dom.guestBtn, null, dom.guestMessageModal); // Guest modal
+            setupModal(null, dom.closeForageModal, dom.forageModal); // Forage modal
+
+            // Custom Message Modal (replaces alert())
+            function showMessage(message, callback) {
+                dom.messageModalText.textContent = message;
+                dom.messageModal.style.display = 'flex';
+
+                // Clone button to remove old listeners
+                const oldCloseBtn = dom.messageModalCloseBtn;
+                const newCloseBtn = oldCloseBtn.cloneNode(true);
+                oldCloseBtn.parentNode.replaceChild(newCloseBtn, oldCloseBtn);
+                dom.messageModalCloseBtn = newCloseBtn; // Re-assign DOM ref
+
+                newCloseBtn.addEventListener('click', () => {
+                    dom.messageModal.style.display = 'none';
+                    if (callback) {
+                        callback();
+                    }
+                }, { once: true });
+            }
+
+            // --- New Starvation/Death Modal Listeners ---
+            dom.starveFeedBtn.addEventListener('click', () => {
+                feed(); // Try to feed
+                slowdownFactor = 1.0; // Resume normal speed
+                dom.starvationModal.style.display = 'none';
+            });
+            dom.starveAcceptBtn.addEventListener('click', () => {
+                slowdownFactor = 1.0; // Resume normal speed
+                dom.starvationModal.style.display = 'none';
+            });
+
+            dom.rollDiceBtn.addEventListener('click', () => {
+                dom.rollDiceBtn.disabled = true;
+                dom.deathDiceArea.textContent = "Death rolls the dice...";
+                
+                setTimeout(() => {
+                    dom.deathDiceArea.innerHTML = "Death's Roll: 🎲 3<br>You roll the dice...";
+                }, 1500);
+                
+                setTimeout(() => {
+                    dom.deathDiceArea.innerHTML = "Death's Roll: 🎲 3<br>Your Roll: 🎲 6";
+                }, 3000);
+                
+                setTimeout(() => {
+                    dom.deathDiceArea.textContent = "You win! A lucky roll indeed...";
+                }, 4500);
+                
+                setTimeout(() => {
+                    dom.deathModal.style.display = 'none';
+                    // Revive the player
+                    gameState.hasUsedRevive = true;
+                    gameState.hearts = 1;
+                    gameState.hunger = 20;
+                    gameState.happiness = 10;
+                    gameState.hasSeenStarveWarning = false; // Reset warning
+                    saveGame();
+                    updateUI();
+                    startGameLoop(); // Restart game loop
+                    showMessage("You have been revived... barely.");
+                }, 6000);
+            });
+
+
+            // --- High Score Logic ---
+            function displayHighScores() {
+                dom.highScoreList.innerHTML = ''; 
+                const scores = gameState.highScores.targetPractice;
+
+                if (scores.length === 0) {
+                    dom.highScoreList.innerHTML = '<p class="no-scores">No high scores... yet!</p>';
+                    return;
+                }
+
+                scores.forEach((score, index) => {
+                    const scoreElement = document.createElement('p');
+                    scoreElement.innerHTML = `<strong>${index + 1}. ${score.name || 'Player'}</strong> <span class="score">${score.score}</span> <em>(${score.date})</em>`;
+                    dom.highScoreList.appendChild(scoreElement);
+                });
+            }
+            
+            dom.highScoreBtn.addEventListener('click', displayHighScores);
+            
+            function populateMinigameLeaderboard() {
+                const list = dom.minigameHighScoreList;
+                list.innerHTML = '';
+                let scores = gameState.highScores.targetPractice;
+                
+                let displayScores = scores;
+                if (scores.length === 0) {
+                    // Populate with Viking scores
+                    displayScores = VIKING_NAMES.map((name, i) => ({ name, score: 10 - i }));
+                }
+
+                // Populate with real scores
+                displayScores.slice(0, 10).forEach((score) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${score.name || 'Player'}:</strong> ${score.score}`;
+                    list.appendChild(li);
+                });
+            }
+
+
+            // --- Specific Event Listeners ---
+            
+            // Auth Listeners
+            dom.logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('rogueXP_User');
+                if (typeof google !== 'undefined') {
+                    google.accounts.id.disableAutoSelect();
+                }
+                window.location.reload();
+            });
+            dom.switchAccountBtn.addEventListener('click', () => {
+                dom.logoutBtn.click();
+            });
+
+            // GUEST BUTTON LOGIC
+            dom.guestMessageConfirmBtn.addEventListener('click', () => {
+                dom.guestMessageModal.style.display = 'none';
+                currentMode = 'offline';
+                dom.authSection.style.display = 'none'; // Hide auth block
+                dom.accountBtn.style.display = 'inline-flex';
+                dom.resetBtn.style.display = 'inline-flex';
+                loadGame(); // Load the 'offline' save
+            });
+
+            dom.saveCharacterName.addEventListener('click', () => {
+                const newName = dom.characterNameField.value.trim();
+                if (newName && newName.length > 2) {
+                    gameState.characterName = newName;
+                    dom.characterNameInput.style.display = 'none';
+                    saveGame();
+                    updateUI();
+                    if(currentMode === 'online') {
+                        document.dispatchEvent(new Event('userLoggedIn'));
+                    }
+                } else {
+                    showMessage("Please enter a name at least 3 characters long.");
+                }
+            });
+            
+            document.addEventListener('userLoggedIn', () => {
+                console.log("User logged in, loading game...");
+                loadGame();
+            });
+
+            // Action Listeners
+            dom.feedBtn.addEventListener('click', feed);
+            dom.playBtn.addEventListener('click', train);
+            dom.forageBtn.addEventListener('click', forage); 
+
+            // Settings Listeners
+            dom.updateCharacterName.addEventListener('click', () => {
+                const newName = dom.settingsCharacterName.value.trim();
+                if (newName && newName.length > 2) {
+                    gameState.characterName = newName;
+                    saveGame();
+                    updateUI();
+                    dom.settingsCharacterName.value = '';
+                    dom.settingsModal.style.display = 'none'; 
+                    showMessage("Character name updated!");
+                } else {
+                    showMessage("Please enter a name at least 3 characters long.");
+                }
+            });
+
+            // Reset Listener
+            dom.confirmReset.addEventListener('click', resetGame);
+
+            // --- Minigame Logic ---
+            let minigameTimer;
+            let minigameScore;
+            let minigameActive = false;
+            
+            dom.startMinigame.addEventListener('click', () => {
+                // Check cooldown
+                const now = Date.now();
+                if (now < gameState.nextMinigameTime) {
+                    showMessage("Minigame is on cooldown!");
+                    return; 
+                }
+                
+                // Start cooldown
+                gameState.nextMinigameTime = now + MINIGAME_COOLDOWN;
+                // triggerCooldownAnimation(dom.minigameBtn, MINIGAME_COOLDOWN); // Handled by loop
+                
+                // Start game
+                minigameActive = true;
+                minigameScore = 0;
+                let timeLeft = 15; 
+                dom.minigameScore.textContent = minigameScore;
+                dom.minigameScoreDisplay.textContent = minigameScore; // Update new display
+                dom.minigameTime.textContent = `${timeLeft}s`;
+                dom.target.style.display = 'block';
+                dom.startMinigame.style.display = 'none';
+                
+                // Reset and start timer bar
+                dom.minigameTimerBar.style.transition = 'none';
+                dom.minigameTimerBar.style.height = '100%';
+                dom.minigameTimerBar.offsetHeight; // Force reflow
+                dom.minigameTimerBar.style.transition = `height ${MINIGAME_DURATION_MS / 1000}s linear`;
+                dom.minigameTimerBar.style.height = '0%';
+                
+                moveTarget();
+
+                minigameTimer = setInterval(() => {
+                    timeLeft--;
+                    dom.minigameTime.textContent = `${timeLeft}s`;
+                    if (timeLeft <= 0) {
+                        endMinigame();
+                    }
+                }, 1000);
+            });
+
+            function endMinigame(cancelled = false) {
+                slowdownFactor = 1.0; // RESUME GAME
+                clearInterval(minigameTimer);
+                minigameActive = false;
+                dom.target.style.display = 'none';
+                dom.startMinigame.style.display = 'block';
+                
+                // Reset timer bar
+                dom.minigameTimerBar.style.transition = 'none';
+                dom.minigameTimerBar.style.height = '100%';
+                
+                if (cancelled) {
+                    showMessage("Minigame cancelled.");
+                    return; // Don't award points or show high scores
+                }
+                
+                const xpGained = Math.floor(minigameScore * 1.5);
+                const foodGained = Math.max(0, Math.floor(minigameScore / 5)); // Food based on score, min 0
+                
+                addXp(xpGained);
+                gameState.food += foodGained;
+                
+                if (minigameScore > 0) { // Only save positive scores
+                    gameState.highScores.targetPractice.push({
+                        score: minigameScore,
+                        name: gameState.characterName, // Add name
+                        date: new Date().toLocaleDateString()
+                    });
+                    gameState.highScores.targetPractice.sort((a, b) => b.score - a.score);
+                    gameState.highScores.targetPractice = gameState.highScores.targetPractice.slice(0, 10);
+                }
+                
+                saveGame(); 
+                
+                setTimeout(() => {
+                    dom.closeMinigame.click(); // This will trigger the modal close logic
+                    
+                    let summary = `Minigame Complete!\nScore: ${minigameScore}\n\nRewards:\n+ ${xpGained} XP\n+ ${foodGained} Food`;
+                    
+                    // Show summary, and on close, show high scores
+                    showMessage(summary, () => {
+                        displayHighScores(); // Show main high score modal
+                        dom.highScoreModal.style.display = 'flex'; 
+                    });
+
+                }, 500);
+            }
+
+            function moveTarget() {
+                if (!minigameActive) return;
+                const areaRect = dom.minigameArea.getBoundingClientRect();
+                const targetSize = dom.target.offsetWidth;
+                
+                const maxX = areaRect.width - targetSize;
+                const maxY = areaRect.height - targetSize;
+                
+                const newX = Math.random() * maxX;
+                const newY = Math.random() * maxY;
+                
+                dom.target.style.left = `${newX}px`;
+                dom.target.style.top = `${newY}px`;
+            }
+
+            dom.target.addEventListener('click', (e) => {
+                e.stopPropagation(); // Stop click from bubbling to minigameArea
+                if (minigameActive) {
+                    minigameScore++;
+                    dom.minigameScore.textContent = minigameScore;
+                    dom.minigameScoreDisplay.textContent = minigameScore;
+                    moveTarget();
+                }
+            });
+
+            // Minigame Miss Handler
+            dom.minigameArea.addEventListener('click', (e) => {
+                if (minigameActive && e.target !== dom.target) {
+                    const penalty = 2 + Math.floor(gameState.level / 2);
+                    minigameScore -= penalty;
+                    dom.minigameScore.textContent = minigameScore;
+                    dom.minigameScoreDisplay.textContent = minigameScore;
+                }
+            });
+            
+            dom.minigameArea.addEventListener('mousemove', (e) => {
+                const areaRect = dom.minigameArea.getBoundingClientRect();
+                const x = e.clientX - areaRect.left;
+                const y = e.clientY - areaRect.top;
+                
+                const crosshairSize = dom.crosshair.offsetWidth;
+                const constrainedX = Math.max(0, Math.min(x - crosshairSize / 2, areaRect.width - crosshairSize));
+                const constrainedY = Math.max(0, Math.min(y - crosshairSize / 2, areaRect.height - crosshairSize));
+
+                dom.crosshair.style.left = `${constrainedX}px`;
+                dom.crosshair.style.top = `${constrainedY}px`;
+            });
+            
+            dom.minigameArea.addEventListener('mouseenter', () => dom.crosshair.style.display = 'block');
+            dom.minigameArea.addEventListener('mouseleave', () => dom.crosshair.style.display = 'none');
+
+
+            // --- Cooldown UI Functions ---
+            function triggerCooldownAnimation(button, duration) {
+                const overlay = button.querySelector('.cooldown-overlay');
+                if (!overlay) return;
+                
+                // Reset animation
+                overlay.style.transition = 'none';
+                overlay.style.transform = 'translateX(0)';
+                
+                // Force a browser reflow
+                overlay.offsetHeight; 
+                
+                // Start animation
+                overlay.style.transition = `transform ${duration / 1000}s linear`;
+                overlay.style.transform = 'translateX(-100%)';
+            }
+
+            function updateButtonCooldown(button, timerText, endTime, now, logicAllows) {
+                if (!button) return;
+                const timeLeft = endTime - now;
+                const isOnCooldown = timeLeft > 0;
+
+                let disabled = false;
+                if (isOnCooldown) {
+                    disabled = true;
+                    timerText.textContent = timeLeft;
+                    // Trigger animation if it's not already running
+                    const overlay = button.querySelector('.cooldown-overlay');
+                    if (overlay && overlay.style.transform !== 'translateX(-100%)') {
+                        const duration = (endTime - now);
+                        triggerCooldownAnimation(button, duration);
+                    }
+                } else {
+                    disabled = !logicAllows; // Disable if logic says no, even if CD is over
+                    timerText.textContent = '';
+                    // Reset overlay
+                    const overlay = button.querySelector('.cooldown-overlay');
+                    if (overlay) {
+                         overlay.style.transition = 'none';
+                         overlay.style.transform = 'translateX(100%)'; // Hide it off-screen
+                    }
+                }
+                
+                button.disabled = disabled;
+                // Sync the .disabled class
+                if (button.disabled) {
+                    button.classList.add('disabled');
+                } else {
+                    button.classList.remove('disabled');
+                }
+            }
+
+            function gameAnimationLoop() {
+                const now = Date.now();
+                
+                updateButtonCooldown(dom.feedBtn, dom.feedBtnTimer, gameState.nextFeedTime, now, true); // Always allowed by logic
+                updateButtonCooldown(dom.playBtn, dom.playBtnTimer, gameState.nextTrainTime, now, true); // Always allowed by logic
+                updateButtonCooldown(dom.forageBtn, dom.forageBtnTimer, gameState.nextForageTime, now, gameState.level < 10 && gameState.food < 6);
+                updateButtonCooldown(dom.minigameBtn, dom.minigameBtnTimer, gameState.nextMinigameTime, now, gameState.level >= 2);
+
+                requestAnimationFrame(gameAnimationLoop);
+            }
+
+
+            // --- Initial Game Load ---
+            const user = localStorage.getItem('rogueXP_User');
+            if (user) {
+                 document.dispatchEvent(new Event('userLoggedIn'));
+            }
+            
+            console.log("RogueXP Initialized. Waiting for user action.");
+
+        });
+    </script>
+</body>
+</html>
+
