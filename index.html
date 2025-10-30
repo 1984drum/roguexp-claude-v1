@@ -1428,6 +1428,10 @@
                         <div class="inventory-item empty"></div>
                         <div class="inventory-item empty"></div>
                     </div>
+                    <div id="weaponsSection" style="margin-top: 15px; display: none;">
+                        <h4 style="font-size: 14px; color: #ffd700; margin-bottom: 8px;">Weapons</h4>
+                        <div id="weaponsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
                 </div>
             </div>
             
@@ -2026,6 +2030,10 @@
 
                 // Character
                 characterCanvas: document.getElementById('characterCanvas'),
+
+                // Weapons
+                weaponsSection: document.getElementById('weaponsSection'),
+                weaponsList: document.getElementById('weaponsList'),
             };
 
             // --- Game State ---
@@ -2101,8 +2109,20 @@
                 mazeSize: 5,
                 isInCombat: false,
                 currentEnemy: null,
-                inProgress: false
+                inProgress: false,
+                chestPos: { x: -1, y: -1 },
+                chestOpened: false
             };
+
+            // Weapon definitions
+            const weapons = [
+                { id: 'rusty_sword', name: 'Rusty Sword', icon: '🗡️', attack: 2, defence: 0, rarity: 'common' },
+                { id: 'wooden_shield', name: 'Wooden Shield', icon: '🛡️', attack: 0, defence: 3, rarity: 'common' },
+                { id: 'iron_dagger', name: 'Iron Dagger', icon: '🔪', attack: 4, defence: 1, rarity: 'uncommon' },
+                { id: 'steel_sword', name: 'Steel Sword', icon: '⚔️', attack: 6, defence: 2, rarity: 'rare' },
+                { id: 'battle_axe', name: 'Battle Axe', icon: '🪓', attack: 8, defence: 1, rarity: 'rare' },
+                { id: 'knight_shield', name: 'Knight Shield', icon: '🛡️', attack: 1, defence: 5, rarity: 'rare' }
+            ];
 
 
             // --- Page Visibility (Pause Game) ---
@@ -2359,10 +2379,56 @@
                 // Inventory
                 dom.foodCount.textContent = gameState.food;
 
+                // Weapons
+                updateWeaponsDisplay();
+
                 // Update and draw the 3D matrix character
                 updateCharacterMatrix();
                 drawMatrixCharacter();
                 updateUnlocks();
+            }
+
+            function updateWeaponsDisplay() {
+                if (!gameState.weapons || gameState.weapons.length === 0) {
+                    dom.weaponsSection.style.display = 'none';
+                    return;
+                }
+
+                dom.weaponsSection.style.display = 'block';
+                dom.weaponsList.innerHTML = '';
+
+                gameState.weapons.forEach((weapon, index) => {
+                    const weaponItem = document.createElement('div');
+                    weaponItem.style.cssText = `
+                        background: rgba(139, 69, 19, 0.3);
+                        border: 2px solid ${weapon.rarity === 'rare' ? '#9b59b6' : weapon.rarity === 'uncommon' ? '#3498db' : '#95a5a6'};
+                        border-radius: 5px;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        cursor: pointer;
+                        transition: transform 0.2s;
+                    `;
+                    weaponItem.onmouseover = () => weaponItem.style.transform = 'scale(1.05)';
+                    weaponItem.onmouseout = () => weaponItem.style.transform = 'scale(1)';
+
+                    weaponItem.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 24px;">${weapon.icon}</span>
+                            <div>
+                                <div style="font-weight: bold; font-size: 12px;">${weapon.name}</div>
+                                <div style="font-size: 10px; color: #aaa;">${weapon.rarity.toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; font-size: 11px;">
+                            <span style="color: #e74c3c;">⚔️ ${weapon.attack}</span>
+                            <span style="color: #3498db;">🛡️ ${weapon.defence}</span>
+                        </div>
+                    `;
+
+                    dom.weaponsList.appendChild(weaponItem);
+                });
             }
             
             function updateUnlocks() {
@@ -3543,14 +3609,55 @@
                     }
                 }
 
-                // Start from (1,1) for odd-sized mazes
-                carve(1, 1);
+                // Start from (0,0) to ensure top-left is always a path
+                carve(0, 0);
 
-                // Ensure start and end are open
-                maze[0][0] = 0;
-                maze[size-1][size-1] = 0;
+                // Widen paths by removing walls adjacent to paths (makes corridors 2 cells wide)
+                for (let y = 0; y < size - 1; y++) {
+                    for (let x = 0; x < size - 1; x++) {
+                        // If current cell is a path and right cell is a path, open the wall below current
+                        if (maze[y][x] === 0 && maze[y][x + 1] === 0) {
+                            maze[y + 1][x] = 0;
+                        }
+                        // If current cell is a path and bottom cell is a path, open the wall to the right
+                        if (maze[y][x] === 0 && maze[y + 1][x] === 0) {
+                            maze[y][x + 1] = 0;
+                        }
+                    }
+                }
 
                 return maze;
+            }
+
+            // Find the furthest reachable path cell from start (for proper exit placement)
+            function findFurthestPathCell(maze, startX, startY) {
+                const size = maze.length;
+                const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+                const queue = [{x: startX, y: startY, dist: 0}];
+                visited[startY][startX] = true;
+                let furthest = {x: startX, y: startY, dist: 0};
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+
+                    if (current.dist > furthest.dist) {
+                        furthest = current;
+                    }
+
+                    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+                    for (const [dx, dy] of directions) {
+                        const nx = current.x + dx;
+                        const ny = current.y + dy;
+
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size &&
+                            maze[ny][nx] === 0 && !visited[ny][nx]) {
+                            visited[ny][nx] = true;
+                            queue.push({x: nx, y: ny, dist: current.dist + 1});
+                        }
+                    }
+                }
+
+                return {x: furthest.x, y: furthest.y};
             }
 
             function startAdventureGame() {
@@ -3570,8 +3677,8 @@
                 // Set player position (top-left)
                 adventureState.playerPos = { x: 0, y: 0 };
 
-                // Set exit position (bottom-right)
-                adventureState.exitPos = { x: adventureState.mazeSize - 1, y: adventureState.mazeSize - 1 };
+                // Find the actual furthest reachable path cell for exit
+                adventureState.exitPos = findFurthestPathCell(adventureState.maze, 0, 0);
 
                 // Place 2 enemies randomly in the maze (not on start or end)
                 adventureState.enemies = [];
@@ -3587,6 +3694,24 @@
                         adventureState.enemies.push({ x, y, health: 1 });
                         enemiesPlaced++;
                     }
+                }
+
+                // Place treasure chest randomly in maze (not on walls, start, exit, or enemies)
+                adventureState.chestOpened = false;
+                let chestPlaced = false;
+                let attempts = 0;
+                while (!chestPlaced && attempts < 100) {
+                    const x = Math.floor(Math.random() * adventureState.mazeSize);
+                    const y = Math.floor(Math.random() * adventureState.mazeSize);
+
+                    if (adventureState.maze[y][x] === 0 && // Must be on path
+                        !(x === 0 && y === 0) && // Not on start
+                        !(x === adventureState.exitPos.x && y === adventureState.exitPos.y) && // Not on exit
+                        !adventureState.enemies.some(e => e.x === x && e.y === y)) { // Not on enemy
+                        adventureState.chestPos = { x, y };
+                        chestPlaced = true;
+                    }
+                    attempts++;
                 }
 
                 adventureState.isInCombat = false;
@@ -3635,6 +3760,11 @@
                         } else if (adventureState.enemies.some(e => e.x === x && e.y === y)) {
                             cell.classList.add('enemy');
                             cell.textContent = '👹';
+                        } else if (x === adventureState.chestPos.x && y === adventureState.chestPos.y && !adventureState.chestOpened) {
+                            cell.classList.add('chest');
+                            cell.textContent = '📦';
+                            cell.style.backgroundColor = '#ffd700';
+                            cell.style.fontSize = '28px';
                         } else if (x === 0 && y === 0) {
                             cell.classList.add('start');
                         }
@@ -3642,6 +3772,82 @@
                         dom.mazeGrid.appendChild(cell);
                     }
                 }
+            }
+
+            function openChest() {
+                if (adventureState.chestOpened) return;
+
+                adventureState.chestOpened = true;
+
+                // Calculate loot based on level
+                const foodAmount = 2 + Math.floor(Math.random() * 4) + Math.floor(gameState.level / 3); // 2-5 + level scaling
+                const goldAmount = 20 + Math.floor(Math.random() * 31) + (gameState.level * 5); // 20-50 + level scaling
+
+                // 20-30% chance for a weapon
+                const weaponChance = 0.20 + (Math.random() * 0.10); // 20-30%
+                let foundWeapon = null;
+
+                if (Math.random() < weaponChance) {
+                    // Pick a random weapon, with rarity weighting
+                    const rarityWeights = { common: 60, uncommon: 30, rare: 10 };
+                    const totalWeight = 100;
+                    const roll = Math.random() * totalWeight;
+
+                    let cumulative = 0;
+                    let selectedRarity = 'common';
+                    for (const [rarity, weight] of Object.entries(rarityWeights)) {
+                        cumulative += weight;
+                        if (roll < cumulative) {
+                            selectedRarity = rarity;
+                            break;
+                        }
+                    }
+
+                    const weaponsOfRarity = weapons.filter(w => w.rarity === selectedRarity);
+                    if (weaponsOfRarity.length > 0) {
+                        foundWeapon = weaponsOfRarity[Math.floor(Math.random() * weaponsOfRarity.length)];
+                    }
+                }
+
+                // Add loot to inventory
+                gameState.food += foodAmount;
+                gameState.gold = (gameState.gold || 0) + goldAmount;
+
+                // Trigger celebration
+                triggerCelebration('victory-celebration');
+                createParticles('💰', 8);
+                setTimeout(() => createParticles('✨', 6), 200);
+
+                // Build loot message
+                let lootMessage = `Treasure Chest Opened!\n\nYou found:\n`;
+                lootMessage += `+ ${foodAmount} Food 🍖\n`;
+                lootMessage += `+ ${goldAmount} Gold 💰\n`;
+
+                if (foundWeapon) {
+                    lootMessage += `\n${foundWeapon.icon} ${foundWeapon.name}\n`;
+                    lootMessage += `Attack: +${foundWeapon.attack}  Defence: +${foundWeapon.defence}\n`;
+                    lootMessage += `Rarity: ${foundWeapon.rarity.toUpperCase()}`;
+
+                    // Add weapon to game state (for future equipment system)
+                    if (!gameState.weapons) {
+                        gameState.weapons = [];
+                    }
+                    gameState.weapons.push({
+                        id: foundWeapon.id,
+                        name: foundWeapon.name,
+                        icon: foundWeapon.icon,
+                        attack: foundWeapon.attack,
+                        defence: foundWeapon.defence,
+                        rarity: foundWeapon.rarity
+                    });
+                }
+
+                saveGame();
+                updateUI();
+                showMessage(lootMessage);
+
+                // Re-render maze to remove chest
+                renderMaze();
             }
 
             function movePlayer(dx, dy) {
@@ -3664,6 +3870,12 @@
                 // Move player
                 adventureState.playerPos.x = newX;
                 adventureState.playerPos.y = newY;
+
+                // Check for treasure chest
+                if (newX === adventureState.chestPos.x && newY === adventureState.chestPos.y && !adventureState.chestOpened) {
+                    openChest();
+                    return;
+                }
 
                 // Check for enemy
                 const enemyIndex = adventureState.enemies.findIndex(e => e.x === newX && e.y === newY);
