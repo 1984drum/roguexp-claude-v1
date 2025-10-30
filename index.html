@@ -921,6 +921,183 @@
             min-height: 50px;
         }
 
+        /* --- Adventure Modal (Maze Game) --- */
+        .adventure-content {
+            max-width: 600px;
+        }
+        .adventure-status {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--color-parchment-dark);
+            border: 2px solid var(--color-wood-medium);
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .adventure-status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .adventure-status-label {
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            font-weight: 600;
+        }
+        .adventure-status-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-wood-dark);
+        }
+
+        /* Maze Display */
+        .maze-container {
+            background: var(--color-parchment-dark);
+            border: 3px solid var(--color-wood-dark);
+            border-radius: 5px;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .maze-grid {
+            display: grid;
+            gap: 2px;
+            background: var(--color-wood-dark);
+            border: 2px solid var(--color-wood-dark);
+        }
+        .maze-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            background: var(--color-parchment);
+            transition: background 0.2s;
+        }
+        .maze-cell.wall {
+            background: var(--color-wood-dark);
+        }
+        .maze-cell.path {
+            background: var(--color-parchment);
+        }
+        .maze-cell.start {
+            background: #90ee90;
+        }
+        .maze-cell.end {
+            background: #ffd700;
+        }
+        .maze-cell.player {
+            background: #87ceeb;
+        }
+        .maze-cell.enemy {
+            background: #ff6b6b;
+        }
+
+        /* Combat UI */
+        .combat-ui {
+            background: var(--color-parchment-dark);
+            border: 3px solid var(--color-danger);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .combat-ui.active {
+            display: block;
+        }
+        .combat-header {
+            text-align: center;
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            color: var(--color-danger);
+            margin-bottom: 15px;
+        }
+        .combat-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+        .combat-stat {
+            text-align: center;
+        }
+        .combat-stat-label {
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            font-weight: 600;
+        }
+        .combat-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-wood-dark);
+        }
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            min-height: 80px;
+            align-items: center;
+        }
+        .dice {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 3px solid var(--color-wood-dark);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--color-ink);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+        }
+        @keyframes diceRoll {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+        }
+        .dice.rolling {
+            animation: diceRoll 0.5s ease-in-out;
+        }
+        .combat-result {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--color-wood-dark);
+            min-height: 30px;
+        }
+        .combat-result.victory {
+            color: var(--color-happiness);
+        }
+        .combat-result.defeat {
+            color: var(--color-danger);
+        }
+        .combat-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Navigation Instructions */
+        .navigation-hint {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--color-wood-medium);
+            padding: 10px;
+            background: var(--color-parchment-dark);
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .navigation-hint.hidden {
+            display: none;
+        }
 
     </style>
 </head>
@@ -1138,7 +1315,7 @@
                     Go on Adventure
                 </button>
                 <div class="adventure-hint" id="adventureHint">
-                    Reach Level 10 to unlock adventures
+                    Reach Level 1 to unlock adventures
                 </div>
             </div>
 
@@ -1378,9 +1555,81 @@
         </div>
     </div>
 
+    <!-- Adventure Modal (Maze Game) -->
+    <div class="modal-overlay" id="adventureModal" style="display: none;">
+        <div class="modal-content adventure-content">
+            <div class="modal-header">
+                <h2>Maze Adventure</h2>
+                <button class="close-btn" id="closeAdventure">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Adventure Status -->
+                <div class="adventure-status">
+                    <div class="adventure-status-item">
+                        <span class="adventure-status-label">Level</span>
+                        <span class="adventure-status-value" id="adventureLevel">1</span>
+                    </div>
+                    <div class="adventure-status-item">
+                        <span class="adventure-status-label">Enemies</span>
+                        <span class="adventure-status-value" id="adventureEnemiesRemaining">2</span>
+                    </div>
+                    <div class="adventure-status-item">
+                        <span class="adventure-status-label">Hearts</span>
+                        <span class="adventure-status-value" id="adventureHearts">3</span>
+                    </div>
+                </div>
 
-    <!-- 
-      START of INLINED JAVASCRIPT 
+                <!-- Navigation Hint -->
+                <div class="navigation-hint" id="navigationHint">
+                    Use WASD or Arrow Keys to move. Reach the golden exit!
+                </div>
+
+                <!-- Maze Container -->
+                <div class="maze-container">
+                    <div class="maze-grid" id="mazeGrid">
+                        <!-- Maze cells will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Combat UI (hidden by default) -->
+                <div class="combat-ui" id="combatUI">
+                    <div class="combat-header">Enemy Encounter!</div>
+                    <div class="combat-stats">
+                        <div class="combat-stat">
+                            <div class="combat-stat-label">Enemy Health</div>
+                            <div class="combat-stat-value" id="enemyHealth">1</div>
+                        </div>
+                    </div>
+                    <div class="dice-area" id="adventureDiceArea">
+                        <!-- Dice will appear here -->
+                    </div>
+                    <div class="combat-result" id="combatResult"></div>
+                    <div class="combat-actions">
+                        <button class="medieval-button" id="rollCombatDice">
+                            <span class="button-icon">🎲</span>
+                            Roll Dice
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Start/Restart Button -->
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="medieval-button" id="startAdventure">
+                        <span class="button-icon">⚔️</span>
+                        Start Adventure
+                    </button>
+                    <button class="medieval-button" id="restartAdventure" style="display: none;">
+                        <span class="button-icon">🔄</span>
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!--
+      START of INLINED JAVASCRIPT
     -->
     <script>
         // Function to parse JWT tokens (for Google Sign-In)
@@ -1574,6 +1823,22 @@
                 foragePrompt: document.getElementById('foragePrompt'), // New
                 forageTarget: document.getElementById('forageTarget'), // New
 
+                // Adventure (Maze Game)
+                adventureModal: document.getElementById('adventureModal'),
+                closeAdventure: document.getElementById('closeAdventure'),
+                adventureLevel: document.getElementById('adventureLevel'),
+                adventureEnemiesRemaining: document.getElementById('adventureEnemiesRemaining'),
+                adventureHearts: document.getElementById('adventureHearts'),
+                navigationHint: document.getElementById('navigationHint'),
+                mazeGrid: document.getElementById('mazeGrid'),
+                combatUI: document.getElementById('combatUI'),
+                enemyHealth: document.getElementById('enemyHealth'),
+                adventureDiceArea: document.getElementById('adventureDiceArea'),
+                combatResult: document.getElementById('combatResult'),
+                rollCombatDice: document.getElementById('rollCombatDice'),
+                startAdventure: document.getElementById('startAdventure'),
+                restartAdventure: document.getElementById('restartAdventure'),
+
                 // Character
                 characterCanvas: document.getElementById('characterCanvas'),
             };
@@ -1634,6 +1899,18 @@
             let forageGameTimer = null;
             let forageStartTime = 0;
             let forageTargetClicked = false;
+
+            // Adventure (Maze) game state
+            let adventureState = {
+                maze: [],
+                playerPos: { x: 0, y: 0 },
+                exitPos: { x: 0, y: 0 },
+                enemies: [],
+                mazeSize: 5,
+                isInCombat: false,
+                currentEnemy: null,
+                inProgress: false
+            };
 
 
             // --- Page Visibility (Pause Game) ---
@@ -1886,7 +2163,7 @@
             }
             
             function updateUnlocks() {
-                if (gameState.level >= 10) {
+                if (gameState.level >= 1) {
                     dom.adventureBtn.disabled = false;
                     dom.adventureBtn.classList.remove('disabled');
                     dom.adventureHint.style.display = 'none';
@@ -1894,7 +2171,7 @@
                     dom.adventureBtn.disabled = true;
                     dom.adventureBtn.classList.add('disabled');
                     dom.adventureHint.style.display = 'block';
-                    dom.adventureHint.textContent = `Reach Level ${10} to unlock adventures`;
+                    dom.adventureHint.textContent = `Reach Level ${1} to unlock adventures`;
                 }
 
                 // Inventory Slots (now on main page)
@@ -2301,11 +2578,73 @@
             });
 
             setupModal(null, dom.closeMinigame, dom.minigameModal);
-            setupModal(dom.accountBtn, dom.closeSettings, dom.settingsModal); 
+            setupModal(dom.accountBtn, dom.closeSettings, dom.settingsModal);
             setupModal(dom.resetBtn, dom.cancelReset, dom.resetModal);
             setupModal(dom.highScoreBtn, dom.closeHighScoreModal, dom.highScoreModal);
             setupModal(dom.guestBtn, null, dom.guestMessageModal); // Guest modal
             setupModal(null, dom.closeForageModal, dom.forageModal); // Forage modal
+
+            // Adventure Modal Setup
+            dom.adventureBtn.addEventListener('click', () => {
+                if (dom.adventureBtn.disabled) return;
+                slowdownFactor = 0.01; // SLOW GAME
+                dom.adventureModal.style.display = 'flex';
+                dom.startAdventure.style.display = 'inline-flex';
+                dom.restartAdventure.style.display = 'none';
+                dom.combatUI.classList.remove('active');
+                dom.navigationHint.classList.remove('hidden');
+            });
+
+            dom.closeAdventure.addEventListener('click', () => {
+                dom.adventureModal.style.display = 'none';
+                slowdownFactor = 1.0; // RESUME GAME
+                adventureState.inProgress = false;
+            });
+
+            dom.startAdventure.addEventListener('click', () => {
+                startAdventureGame();
+            });
+
+            dom.restartAdventure.addEventListener('click', () => {
+                startAdventureGame();
+            });
+
+            dom.rollCombatDice.addEventListener('click', () => {
+                rollCombatDice();
+            });
+
+            // Keyboard controls for maze navigation
+            document.addEventListener('keydown', (e) => {
+                if (dom.adventureModal.style.display !== 'flex') return;
+                if (!adventureState.inProgress || adventureState.isInCombat) return;
+
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        movePlayer(0, -1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        movePlayer(0, 1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        movePlayer(-1, 0);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        movePlayer(1, 0);
+                        e.preventDefault();
+                        break;
+                }
+            });
 
             // Custom Message Modal (replaces alert())
             function showMessage(message, callback) {
@@ -2619,6 +2958,289 @@
             dom.minigameArea.addEventListener('mouseenter', () => dom.crosshair.style.display = 'block');
             dom.minigameArea.addEventListener('mouseleave', () => dom.crosshair.style.display = 'none');
 
+
+            // --- Adventure (Maze) Game Logic ---
+
+            // Generate a simple maze using recursive backtracking
+            function generateMaze(size) {
+                const maze = Array(size).fill(null).map(() => Array(size).fill(1)); // 1 = wall
+
+                function carve(x, y) {
+                    maze[y][x] = 0; // 0 = path
+
+                    const directions = [
+                        [0, -2], [2, 0], [0, 2], [-2, 0]
+                    ].sort(() => Math.random() - 0.5); // Randomize
+
+                    for (const [dx, dy] of directions) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size && maze[ny][nx] === 1) {
+                            maze[y + dy/2][x + dx/2] = 0; // Carve between
+                            carve(nx, ny);
+                        }
+                    }
+                }
+
+                // Start from (1,1) for odd-sized mazes
+                carve(1, 1);
+
+                // Ensure start and end are open
+                maze[0][0] = 0;
+                maze[size-1][size-1] = 0;
+
+                return maze;
+            }
+
+            function startAdventureGame() {
+                // Calculate maze size based on level (5x5 at level 1, up to 11x11 at higher levels)
+                const baseSize = 5;
+                const sizeIncrease = Math.min(Math.floor(gameState.level / 3), 3) * 2; // +2 every 3 levels, max +6
+                adventureState.mazeSize = baseSize + sizeIncrease;
+
+                // Ensure odd size for maze generation algorithm
+                if (adventureState.mazeSize % 2 === 0) {
+                    adventureState.mazeSize += 1;
+                }
+
+                // Generate maze
+                adventureState.maze = generateMaze(adventureState.mazeSize);
+
+                // Set player position (top-left)
+                adventureState.playerPos = { x: 0, y: 0 };
+
+                // Set exit position (bottom-right)
+                adventureState.exitPos = { x: adventureState.mazeSize - 1, y: adventureState.mazeSize - 1 };
+
+                // Place 2 enemies randomly in the maze (not on start or end)
+                adventureState.enemies = [];
+                let enemiesPlaced = 0;
+                while (enemiesPlaced < 2) {
+                    const x = Math.floor(Math.random() * adventureState.mazeSize);
+                    const y = Math.floor(Math.random() * adventureState.mazeSize);
+
+                    if (adventureState.maze[y][x] === 0 && // Must be on path
+                        !(x === 0 && y === 0) && // Not on start
+                        !(x === adventureState.exitPos.x && y === adventureState.exitPos.y) && // Not on end
+                        !adventureState.enemies.some(e => e.x === x && e.y === y)) { // Not duplicate
+                        adventureState.enemies.push({ x, y, health: 1 });
+                        enemiesPlaced++;
+                    }
+                }
+
+                adventureState.isInCombat = false;
+                adventureState.currentEnemy = null;
+                adventureState.inProgress = true;
+
+                // Update UI
+                dom.adventureLevel.textContent = gameState.level;
+                dom.adventureEnemiesRemaining.textContent = adventureState.enemies.length;
+                dom.adventureHearts.textContent = gameState.hearts;
+                dom.navigationHint.classList.remove('hidden');
+                dom.combatUI.classList.remove('active');
+                dom.startAdventure.style.display = 'none';
+                dom.restartAdventure.style.display = 'none';
+
+                renderMaze();
+            }
+
+            function renderMaze() {
+                const size = adventureState.mazeSize;
+                dom.mazeGrid.innerHTML = '';
+                dom.mazeGrid.style.gridTemplateColumns = `repeat(${size}, 40px)`;
+                dom.mazeGrid.style.gridTemplateRows = `repeat(${size}, 40px)`;
+
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'maze-cell';
+                        cell.dataset.x = x;
+                        cell.dataset.y = y;
+
+                        // Determine cell type
+                        if (adventureState.maze[y][x] === 1) {
+                            cell.classList.add('wall');
+                        } else {
+                            cell.classList.add('path');
+                        }
+
+                        // Check for special markers
+                        if (x === adventureState.playerPos.x && y === adventureState.playerPos.y) {
+                            cell.classList.add('player');
+                            cell.textContent = '🛡️';
+                        } else if (x === adventureState.exitPos.x && y === adventureState.exitPos.y) {
+                            cell.classList.add('end');
+                            cell.textContent = '🏆';
+                        } else if (adventureState.enemies.some(e => e.x === x && e.y === y)) {
+                            cell.classList.add('enemy');
+                            cell.textContent = '👹';
+                        } else if (x === 0 && y === 0) {
+                            cell.classList.add('start');
+                        }
+
+                        dom.mazeGrid.appendChild(cell);
+                    }
+                }
+            }
+
+            function movePlayer(dx, dy) {
+                if (!adventureState.inProgress || adventureState.isInCombat) return;
+
+                const newX = adventureState.playerPos.x + dx;
+                const newY = adventureState.playerPos.y + dy;
+
+                // Check bounds
+                if (newX < 0 || newX >= adventureState.mazeSize ||
+                    newY < 0 || newY >= adventureState.mazeSize) {
+                    return;
+                }
+
+                // Check if it's a wall
+                if (adventureState.maze[newY][newX] === 1) {
+                    return;
+                }
+
+                // Move player
+                adventureState.playerPos.x = newX;
+                adventureState.playerPos.y = newY;
+
+                // Check for enemy
+                const enemyIndex = adventureState.enemies.findIndex(e => e.x === newX && e.y === newY);
+                if (enemyIndex !== -1) {
+                    startCombat(enemyIndex);
+                    return;
+                }
+
+                // Check for exit
+                if (newX === adventureState.exitPos.x && newY === adventureState.exitPos.y) {
+                    completeAdventure();
+                    return;
+                }
+
+                renderMaze();
+            }
+
+            function startCombat(enemyIndex) {
+                adventureState.isInCombat = true;
+                adventureState.currentEnemy = enemyIndex;
+
+                dom.navigationHint.classList.add('hidden');
+                dom.combatUI.classList.add('active');
+                dom.enemyHealth.textContent = adventureState.enemies[enemyIndex].health;
+                dom.combatResult.textContent = '';
+                dom.adventureDiceArea.innerHTML = '';
+                dom.rollCombatDice.disabled = false;
+
+                renderMaze();
+            }
+
+            function rollCombatDice() {
+                dom.rollCombatDice.disabled = true;
+                dom.combatResult.textContent = '';
+                dom.adventureDiceArea.innerHTML = '';
+
+                // Create dice
+                const dice1 = document.createElement('div');
+                dice1.className = 'dice rolling';
+                dice1.textContent = '?';
+                const dice2 = document.createElement('div');
+                dice2.className = 'dice rolling';
+                dice2.textContent = '?';
+
+                dom.adventureDiceArea.appendChild(dice1);
+                dom.adventureDiceArea.appendChild(dice2);
+
+                // Roll dice after animation
+                setTimeout(() => {
+                    const roll1 = Math.floor(Math.random() * 6) + 1;
+                    const roll2 = Math.floor(Math.random() * 6) + 1;
+                    const total = roll1 + roll2;
+
+                    dice1.classList.remove('rolling');
+                    dice2.classList.remove('rolling');
+                    dice1.textContent = roll1;
+                    dice2.textContent = roll2;
+
+                    setTimeout(() => {
+                        if (total >= 4) {
+                            // Victory
+                            const enemy = adventureState.enemies[adventureState.currentEnemy];
+                            const xpGained = gameState.level * 10;
+                            const goldGained = gameState.level * 2;
+
+                            dom.combatResult.textContent = `Victory! +${xpGained} XP, +${goldGained} Gold`;
+                            dom.combatResult.classList.add('victory');
+                            dom.combatResult.classList.remove('defeat');
+
+                            addXp(xpGained);
+                            gameState.food += goldGained;
+
+                            // Remove enemy
+                            adventureState.enemies.splice(adventureState.currentEnemy, 1);
+                            dom.adventureEnemiesRemaining.textContent = adventureState.enemies.length;
+
+                            setTimeout(() => {
+                                adventureState.isInCombat = false;
+                                adventureState.currentEnemy = null;
+                                dom.combatUI.classList.remove('active');
+                                dom.navigationHint.classList.remove('hidden');
+                                renderMaze();
+                            }, 1500);
+                        } else {
+                            // Defeat
+                            gameState.hearts -= 0.25;
+                            dom.combatResult.textContent = `Defeat! Lost 0.25 hearts`;
+                            dom.combatResult.classList.add('defeat');
+                            dom.combatResult.classList.remove('victory');
+
+                            updateUI();
+                            dom.adventureHearts.textContent = gameState.hearts.toFixed(2);
+
+                            if (gameState.hearts <= 0) {
+                                setTimeout(() => {
+                                    failAdventure();
+                                }, 1500);
+                            } else {
+                                setTimeout(() => {
+                                    dom.rollCombatDice.disabled = false;
+                                }, 1500);
+                            }
+                        }
+
+                        saveGame();
+                    }, 500);
+                }, 500);
+            }
+
+            function completeAdventure() {
+                adventureState.inProgress = false;
+
+                const xpGained = gameState.level * 50;
+                const goldGained = gameState.level * 10 + Math.floor(Math.random() * 20);
+
+                addXp(xpGained);
+                gameState.food += goldGained;
+
+                saveGame();
+                updateUI();
+
+                showMessage(`Adventure Complete!\n\nRewards:\n+ ${xpGained} XP\n+ ${goldGained} Gold\n\nWell done, brave knight!`);
+
+                setTimeout(() => {
+                    dom.adventureModal.style.display = 'none';
+                }, 2000);
+            }
+
+            function failAdventure() {
+                adventureState.inProgress = false;
+                dom.combatUI.classList.remove('active');
+                dom.navigationHint.classList.add('hidden');
+
+                showMessage(`You have fallen in the maze...\n\nYour hearts have been depleted.\nBetter luck next time!`);
+
+                dom.restartAdventure.style.display = 'inline-flex';
+            }
 
             // --- Cooldown UI Functions ---
             function triggerCooldownAnimation(button, duration) {
