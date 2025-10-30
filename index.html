@@ -336,8 +336,8 @@
         #characterCanvas {
             grid-row: 2;
             grid-column: 2;
-            background-color: #333; /* Dark background for the canvas */
-            border: 2px solid var(--color-wood-dark);
+            background-color: #2a2a2a; /* Dark background for the canvas */
+            border: 3px solid var(--color-wood-dark);
             /* Ensure crisp pixels */
             image-rendering: -moz-crisp-edges;
             image-rendering: -webkit-crisp-edges;
@@ -345,6 +345,8 @@
             image-rendering: crisp-edges;
             width: 160px;
             height: 160px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
         }
 
         .character-equip-slot {
@@ -1113,8 +1115,22 @@
             }
         }
 
+        /* Matrix Character Visualization Animations */
+        @keyframes matrixGlow {
+            0%, 100% {
+                box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.2), 0 2px 12px rgba(255, 215, 0, 0.4);
+            }
+        }
+
         .parchment.level-up-celebration {
             animation: levelUpGlow 1s ease-in-out;
+        }
+
+        .parchment.level-up-celebration #characterCanvas {
+            animation: matrixGlow 1s ease-in-out;
         }
 
         .parchment.victory-celebration {
@@ -1933,16 +1949,16 @@
 
             let gameState = {
                 characterName: "RogueXP",
-                hunger: 60, 
+                hunger: 60,
                 happiness: 100,
                 xp: 0,
                 level: 1,
                 food: 5,
-                train: 0, 
-                hearts: 3, 
-                maxHearts: 3, 
-                happinessTickCounter: 0, 
-                heartTickCounter: 0, 
+                train: 0,
+                hearts: 3,
+                maxHearts: 3,
+                happinessTickCounter: 0,
+                heartTickCounter: 0,
                 lastTick: Date.now(),
                 highScores: {
                     targetPractice: []
@@ -1954,7 +1970,14 @@
                 nextMinigameTime: 0,
                 // New state flags
                 hasUsedRevive: false,
-                hasSeenStarveWarning: false
+                hasSeenStarveWarning: false,
+                // 3D Character Matrix
+                characterMatrix: {
+                    grid: [],          // 16x16x3 array
+                    layers: 3,
+                    size: 16,
+                    currentGrid: []    // Stores interpolated values for smooth transitions
+                }
             };
 
             let gameLoopInterval = null;
@@ -2058,7 +2081,7 @@
 
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
-                    
+
                     // Default values for a new game state
                     const defaultState = {
                         characterName: "RogueXP",
@@ -2067,11 +2090,11 @@
                         xp: 0,
                         level: 1,
                         food: 5,
-                        train: 0, 
-                        hearts: 3, 
-                        maxHearts: 3, 
-                        happinessTickCounter: 0, 
-                        heartTickCounter: 0, 
+                        train: 0,
+                        hearts: 3,
+                        maxHearts: 3,
+                        happinessTickCounter: 0,
+                        heartTickCounter: 0,
                         lastTick: Date.now(),
                         highScores: {
                             targetPractice: []
@@ -2081,7 +2104,13 @@
                         nextForageTime: 0,
                         nextMinigameTime: 0,
                         hasUsedRevive: false,
-                        hasSeenStarveWarning: false
+                        hasSeenStarveWarning: false,
+                        characterMatrix: {
+                            grid: [],
+                            layers: 3,
+                            size: 16,
+                            currentGrid: []
+                        }
                     };
 
                     // Ensure new properties exist
@@ -2089,7 +2118,7 @@
                         ...defaultState, // Default new values
                         ...parsedState, // Overwrite with saved values
                         // Ensure counters are reset on load
-                        happinessTickCounter: 0, 
+                        happinessTickCounter: 0,
                         heartTickCounter: 0
                     };
                     console.log("Game Loaded for " + getSaveKey(), gameState);
@@ -2107,7 +2136,10 @@
                         dom.characterNameInput.style.display = 'none';
                     }
                 }
-                
+
+                // Initialize the 3D character matrix
+                initializeCharacterMatrix();
+
                 isGameLoaded = true; // Enable game loop
                 applyOfflineProgress();
                 startGameLoop();
@@ -2210,23 +2242,25 @@
                 dom.hungerValue.textContent = Math.floor(gameState.hunger); // Floor for display
                 dom.happinessBar.style.width = `${gameState.happiness}%`;
                 dom.happinessValue.textContent = Math.floor(gameState.happiness);
-                
+
                 const xpForLevel = (gameState.level * XP_PER_LEVEL);
                 const xpPercent = (gameState.xp / xpForLevel) * 100;
                 dom.xpBar.style.width = `${xpPercent}%`;
                 dom.xpValue.textContent = `${Math.floor(gameState.xp)}/${xpForLevel}`; // Floor XP
-                
+
                 dom.trainBar.style.width = `${gameState.train}%`;
                 dom.trainValue.textContent = Math.floor(gameState.train); // Floor train
-                
+
                 dom.levelNumber.textContent = gameState.level;
                 dom.characterLevel.textContent = `Level ${gameState.level}`;
                 dom.characterNameDisplay.textContent = gameState.characterName;
-                
+
                 // Inventory
                 dom.foodCount.textContent = gameState.food;
-                
-                drawPixelCharacter();
+
+                // Update and draw the 3D matrix character
+                updateCharacterMatrix();
+                drawMatrixCharacter();
                 updateUnlocks();
             }
             
@@ -2314,7 +2348,251 @@
                     }
                 }
             }
-            
+
+            // --- 3D Matrix Character Visualization ---
+            /*
+             * This system represents the character as a 16x16 grid where each cell displays a number.
+             * Behind the scenes, this is a 3D matrix (16x16x3) with layers:
+             * - Layer 0 (Base Stats): Hunger (top), Happiness (middle), Hearts (bottom)
+             * - Layer 1 (XP/Level): Radial gradient from center, intensity based on level
+             * - Layer 2 (Equipment): Reserved for future equipment bonuses
+             *
+             * The visual display shows a weighted composite of all layers with:
+             * - Medieval color scheme: Brown/Parchment -> Gold -> Orange/Red
+             * - Smooth interpolation for transitions
+             * - Glow effects on high-value cells
+             * - Real-time updates at 60fps via the animation loop
+             */
+
+            // Initialize the 3D character matrix
+            function initializeCharacterMatrix() {
+                const size = gameState.characterMatrix.size;
+                const layers = gameState.characterMatrix.layers;
+
+                // Create 3D array: [layer][y][x]
+                gameState.characterMatrix.grid = [];
+                gameState.characterMatrix.currentGrid = [];
+
+                for (let layer = 0; layer < layers; layer++) {
+                    gameState.characterMatrix.grid[layer] = [];
+                    for (let y = 0; y < size; y++) {
+                        gameState.characterMatrix.grid[layer][y] = [];
+                        for (let x = 0; x < size; x++) {
+                            gameState.characterMatrix.grid[layer][y][x] = 0;
+                        }
+                    }
+                }
+
+                // Initialize current grid for interpolation
+                for (let y = 0; y < size; y++) {
+                    gameState.characterMatrix.currentGrid[y] = [];
+                    for (let x = 0; x < size; x++) {
+                        gameState.characterMatrix.currentGrid[y][x] = 0;
+                    }
+                }
+            }
+
+            // Update the character matrix based on current stats
+            function updateCharacterMatrix() {
+                const size = gameState.characterMatrix.size;
+                const grid = gameState.characterMatrix.grid;
+
+                // --- Layer 0: Base Stats (Hunger, Happiness, Hearts) ---
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        let value = 0;
+
+                        // Top rows (0-5): Hunger
+                        if (y < 6) {
+                            value = Math.floor((gameState.hunger / 100) * 99);
+                            // Add some variation based on position
+                            const variation = Math.sin(x * 0.5) * 5;
+                            value = Math.max(0, Math.min(99, value + variation));
+                        }
+                        // Middle rows (6-10): Happiness
+                        else if (y >= 6 && y <= 10) {
+                            value = Math.floor((gameState.happiness / 100) * 99);
+                            const variation = Math.cos(x * 0.5) * 5;
+                            value = Math.max(0, Math.min(99, value + variation));
+                        }
+                        // Bottom rows (11-15): Hearts/Health
+                        else {
+                            const healthPercent = (gameState.hearts / gameState.maxHearts);
+                            value = Math.floor(healthPercent * 99);
+                            const variation = Math.sin((x + y) * 0.3) * 5;
+                            value = Math.max(0, Math.min(99, value + variation));
+                        }
+
+                        grid[0][y][x] = value;
+                    }
+                }
+
+                // --- Layer 1: XP/Level (Radial gradient from center) ---
+                const centerX = size / 2;
+                const centerY = size / 2;
+                const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const dx = x - centerX;
+                        const dy = y - centerY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const normalizedDistance = 1 - (distance / maxDistance);
+
+                        // XP intensity based on level and distance from center
+                        const xpPercent = (gameState.xp / (gameState.level * XP_PER_LEVEL));
+                        const baseValue = Math.floor(gameState.level * 6 + xpPercent * 20);
+                        const value = Math.floor(baseValue * normalizedDistance);
+
+                        grid[1][y][x] = Math.max(0, Math.min(99, value));
+                    }
+                }
+
+                // --- Layer 2: Equipment (placeholder - regions for future equipment) ---
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        let value = 0;
+
+                        // Top-left quadrant: Weapon slot
+                        if (x < size / 4 && y < size / 4) {
+                            value = 0; // No equipment yet
+                        }
+                        // Top-right quadrant: Shield slot
+                        else if (x > (3 * size / 4) && y < size / 4) {
+                            value = 0;
+                        }
+                        // Bottom quadrants: Armor slots
+                        else if (y > (3 * size / 4)) {
+                            value = 0;
+                        }
+
+                        grid[2][y][x] = value;
+                    }
+                }
+
+                // Update current grid with interpolation for smooth transitions
+                updateCurrentGrid();
+            }
+
+            // Interpolate between old and new values for smooth transitions
+            function updateCurrentGrid() {
+                const size = gameState.characterMatrix.size;
+                const grid = gameState.characterMatrix.grid;
+                const current = gameState.characterMatrix.currentGrid;
+                const lerpFactor = 0.15; // Smoothing factor
+
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        // Calculate composite value (weighted average of layers)
+                        const layer0 = grid[0][y][x] * 0.5;  // Base stats: 50%
+                        const layer1 = grid[1][y][x] * 0.35; // XP/Level: 35%
+                        const layer2 = grid[2][y][x] * 0.15; // Equipment: 15%
+                        const targetValue = layer0 + layer1 + layer2;
+
+                        // Lerp to target value
+                        current[y][x] += (targetValue - current[y][x]) * lerpFactor;
+                    }
+                }
+            }
+
+            // Get color based on value (heat map)
+            function getHeatMapColor(value) {
+                // Normalize to 0-1 range
+                const normalized = Math.max(0, Math.min(99, value)) / 99;
+
+                // Medieval color scheme: Brown/Parchment -> Gold -> Red
+                let r, g, b;
+
+                if (normalized < 0.33) {
+                    // Low values: Brown/Parchment (cool tones)
+                    const t = normalized / 0.33;
+                    r = Math.floor(139 + (205 - 139) * t);  // 139 -> 205
+                    g = Math.floor(90 + (133 - 90) * t);    // 90 -> 133
+                    b = Math.floor(43 + (63 - 43) * t);     // 43 -> 63
+                } else if (normalized < 0.66) {
+                    // Mid values: Gold/Yellow
+                    const t = (normalized - 0.33) / 0.33;
+                    r = Math.floor(205 + (240 - 205) * t);  // 205 -> 240
+                    g = Math.floor(133 + (173 - 133) * t);  // 133 -> 173
+                    b = Math.floor(63 + (78 - 63) * t);     // 63 -> 78
+                } else {
+                    // High values: Orange/Red
+                    const t = (normalized - 0.66) / 0.34;
+                    r = Math.floor(240 + (217 - 240) * t);  // 240 -> 217
+                    g = Math.floor(173 + (83 - 173) * t);   // 173 -> 83
+                    b = Math.floor(78 + (79 - 78) * t);     // 78 -> 79
+                }
+
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Check if color is light (for text contrast)
+            function isLightColor(value) {
+                const normalized = value / 99;
+                return normalized > 0.5; // Use dark text on light backgrounds
+            }
+
+            // Draw the matrix character visualization
+            function drawMatrixCharacter() {
+                if (!ctx) {
+                    ctx = dom.characterCanvas.getContext('2d');
+                }
+
+                const canvasSize = dom.characterCanvas.width; // 160
+                const size = gameState.characterMatrix.size; // 16
+                const cellSize = canvasSize / size; // 10
+                const current = gameState.characterMatrix.currentGrid;
+
+                // Clear background
+                ctx.fillStyle = '#2a2a2a';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                // Draw each cell
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const value = current[y][x];
+                        const displayValue = Math.floor(value);
+
+                        // Draw cell background with heat map color
+                        ctx.fillStyle = getHeatMapColor(value);
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+                        // Draw subtle grid lines
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                        ctx.lineWidth = 0.5;
+                        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+                        // Draw number in cell
+                        if (displayValue > 0) {
+                            ctx.fillStyle = isLightColor(value) ? '#000' : '#fff';
+                            ctx.font = 'bold 7px monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(
+                                displayValue,
+                                x * cellSize + cellSize / 2,
+                                y * cellSize + cellSize / 2
+                            );
+                        }
+                    }
+                }
+
+                // Optional: Add glow effect on high-value cells
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const value = current[y][x];
+                        if (value > 80) {
+                            ctx.shadowColor = '#ff6347';
+                            ctx.shadowBlur = 3;
+                            ctx.strokeStyle = 'rgba(255, 99, 71, 0.3)';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+            }
+
             // --- New Hearts Function ---
             function drawHearts() {
                 dom.heartsContainer.innerHTML = '';
@@ -3475,11 +3753,17 @@
 
             function gameAnimationLoop() {
                 const now = Date.now();
-                
+
                 updateButtonCooldown(dom.feedBtn, dom.feedBtnTimer, gameState.nextFeedTime, now, true); // Always allowed by logic
                 updateButtonCooldown(dom.playBtn, dom.playBtnTimer, gameState.nextTrainTime, now, true); // Always allowed by logic
                 updateButtonCooldown(dom.forageBtn, dom.forageBtnTimer, gameState.nextForageTime, now, gameState.level < 10 && gameState.food < 6);
                 updateButtonCooldown(dom.minigameBtn, dom.minigameBtnTimer, gameState.nextMinigameTime, now, gameState.level >= 2);
+
+                // Continuously update the character matrix for smooth animations
+                if (gameState.characterMatrix && gameState.characterMatrix.currentGrid.length > 0) {
+                    updateCurrentGrid(); // Interpolate values
+                    drawMatrixCharacter(); // Redraw with new values
+                }
 
                 requestAnimationFrame(gameAnimationLoop);
             }
