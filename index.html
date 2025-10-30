@@ -1695,6 +1695,9 @@
                     Your knight's hunger is at 5%! They will soon begin to lose hearts.
                     Are you OK with letting your knight die?
                 </p>
+                <p id="starvationTimer" style="color: var(--color-danger); font-weight: bold; font-size: 1.2em; margin-top: 10px;">
+                    Time to decide: <span id="starvationCountdown">10</span>s
+                </p>
                 <div class="modal-button-group">
                     <button class="medieval-button" id="starveFeedBtn">
                         <span class="button-icon">🍖</span>
@@ -1977,6 +1980,8 @@
                 starvationModal: document.getElementById('starvationModal'), // New
                 starveFeedBtn: document.getElementById('starveFeedBtn'), // New
                 starveAcceptBtn: document.getElementById('starveAcceptBtn'), // New
+                starvationTimer: document.getElementById('starvationTimer'), // New
+                starvationCountdown: document.getElementById('starvationCountdown'), // New
                 deathModal: document.getElementById('deathModal'), // New
                 rollDiceBtn: document.getElementById('rollDiceBtn'), // New
                 deathDiceArea: document.getElementById('deathDiceArea'), // New
@@ -2056,8 +2061,8 @@
                 level: 1,
                 food: 5,
                 train: 0,
-                hearts: 3,
-                maxHearts: 3,
+                hearts: 1,
+                maxHearts: 1,
                 happinessTickCounter: 0,
                 heartTickCounter: 0,
                 lastTick: Date.now(),
@@ -2086,7 +2091,9 @@
             let ctx = null; // For character canvas
             let isGameLoaded = false; // Flag to prevent auto-start
             let slowdownFactor = 1.0; // Replaces isGameSlowed
-            
+            let starvationTimerInterval = null; // Timer for starvation warning countdown
+            let starvationTimeRemaining = 10; // Seconds remaining on starvation timer
+
             // Forage minigame state
             let forageGameTimer = null;
             let forageStartTime = 0;
@@ -2734,6 +2741,7 @@
                     slowdownFactor = 0.05; // Slow time 20x
                     gameState.hasSeenStarveWarning = true;
                     dom.starvationModal.style.display = 'flex';
+                    startStarvationTimer(); // Start the countdown
                 }
 
                 // --- Passive XP ---
@@ -3177,13 +3185,49 @@
                 }
             }
 
+            // --- Starvation Timer Functions ---
+            function startStarvationTimer() {
+                // Reset timer
+                starvationTimeRemaining = 10;
+                dom.starvationCountdown.textContent = starvationTimeRemaining;
+                dom.starveFeedBtn.style.display = ''; // Show Feed button
+                dom.starvationTimer.style.display = ''; // Show timer text
+
+                // Clear any existing timer
+                if (starvationTimerInterval) {
+                    clearInterval(starvationTimerInterval);
+                }
+
+                // Start countdown
+                starvationTimerInterval = setInterval(() => {
+                    starvationTimeRemaining--;
+                    dom.starvationCountdown.textContent = starvationTimeRemaining;
+
+                    if (starvationTimeRemaining <= 0) {
+                        // Time's up - hide Feed button
+                        dom.starveFeedBtn.style.display = 'none';
+                        clearInterval(starvationTimerInterval);
+                        starvationTimerInterval = null;
+                    }
+                }, 1000);
+            }
+
+            function stopStarvationTimer() {
+                if (starvationTimerInterval) {
+                    clearInterval(starvationTimerInterval);
+                    starvationTimerInterval = null;
+                }
+            }
+
             // --- New Starvation/Death Modal Listeners ---
             dom.starveFeedBtn.addEventListener('click', () => {
+                stopStarvationTimer();
                 feed(); // Try to feed
                 slowdownFactor = 1.0; // Resume normal speed
                 dom.starvationModal.style.display = 'none';
             });
             dom.starveAcceptBtn.addEventListener('click', () => {
+                stopStarvationTimer();
                 slowdownFactor = 1.0; // Resume normal speed
                 dom.starvationModal.style.display = 'none';
             });
