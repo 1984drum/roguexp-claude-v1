@@ -564,6 +564,43 @@
             color: var(--color-wood-dark);
         }
 
+        /* --- Login Gate Modal Styles --- */
+        .login-options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 25px 0;
+        }
+        .login-options .medieval-button {
+            width: 100%;
+            padding: 18px 20px;
+            font-size: 1.1rem;
+            justify-content: center;
+        }
+        .login-options .medieval-button .button-icon {
+            font-size: 1.5em;
+        }
+        .login-note {
+            font-size: 0.85rem;
+            color: var(--color-wood-medium);
+            text-align: center;
+            font-style: italic;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+        #loginGateModal .modal-content {
+            text-align: center;
+        }
+        #loginGateModal .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        #loginGateModal .modal-content > p {
+            font-size: 1rem;
+            color: var(--color-ink);
+            margin-bottom: 10px;
+        }
+
         /* --- Inventory Styles (Now on main page) --- */
         .inventory-items h3 {
             margin-bottom: 10px;
@@ -994,9 +1031,27 @@
         }
         .maze-cell.player {
             background: #87ceeb;
+            font-size: 2em;
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            animation: playerPulse 1.5s infinite ease-in-out;
+            position: relative;
+            z-index: 10;
         }
         .maze-cell.enemy {
             background: #ff6b6b;
+        }
+
+        /* Player pulse animation */
+        @keyframes playerPulse {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 1);
+                transform: scale(1.05);
+            }
         }
 
         /* Combat UI */
@@ -1187,6 +1242,42 @@
 </head>
 <body>
 
+    <!-- Login Gate Modal (Shows on page load) -->
+    <div class="modal-overlay" id="loginGateModal" style="display: flex;">
+        <div class="modal-content">
+            <h2>Welcome to RogueXP</h2>
+            <p>Your adventure awaits! Choose how to begin:</p>
+            <div class="login-options">
+                <!-- Guest button -->
+                <button class="medieval-button" id="playAsGuestBtn">
+                    <span class="button-icon">🎲</span>
+                    <span>Play as Guest</span>
+                </button>
+
+                <!-- Google sign-in container -->
+                <div id="loginGoogleSignInContainer">
+                    <div id="loginGoogleSignIn">
+                        <div id="g_id_onload_login"
+                             data-client_id="435254790459-8o6qa9skdt207h6faev4uud3k9r8nns7.apps.googleusercontent.com"
+                             data-callback="handleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                              data-type="standard"
+                              data-size="large"
+                              data-theme="outline"
+                              data-text="signin_with"
+                              data-shape="rectangular"
+                              data-logo_alignment="left"
+                              data-width="300">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="login-note">Guest: Progress saved locally on this device.<br>Google: Cloud saves accessible anywhere.</p>
+        </div>
+    </div>
+
     <div class="manuscript-container">
         <!-- Parchment element to apply pulsing -->
         <div class="parchment" id="parchment">
@@ -1194,8 +1285,8 @@
                 <h1 class="title">RogueXP</h1>
                 <p class="subtitle">The First Adventure</p>
                 <div class="decorative-border"></div>
-                <!-- Authentication Section -->
-                <div class="auth-section" id="authSection">
+                <!-- Authentication Section (Hidden by default, shown only if needed) -->
+                <div class="auth-section" id="authSection" style="display: none;">
                     <div class="google-signin" id="googleSignIn">
                         <div id="g_id_onload"
                              data-client_id="435254790459-8o6qa9skdt207h6faev4uud3k9r8nns7.apps.googleusercontent.com"
@@ -1743,20 +1834,26 @@
                     email: userData.email,
                     picture: userData.picture
                 }));
-                
+
+                // Close the login gate modal
+                document.getElementById('loginGateModal').style.display = 'none';
+
                 // --- Update UI for login ---
                 document.getElementById('googleSignIn').style.display = 'none';
                 document.getElementById('guestBtn').style.display = 'none'; // Hide guest btn
                 document.getElementById('userInfo').style.display = 'none'; // No longer used
                 document.getElementById('settingsUserName').textContent = userData.email;
-                
+
                 // Show footer buttons
                 document.getElementById('accountBtn').style.display = 'inline-flex';
                 document.getElementById('resetBtn').style.display = 'inline-flex';
-                
+
                 // Hide the origin debug helper on successful login
                 document.getElementById('originDebug').style.display = 'none';
-                
+
+                // Hide the main auth section (now redundant)
+                document.getElementById('authSection').style.display = 'none';
+
                 // Check if a character name is set. If not, prompt for one.
                 const saveKey = `rogueXP_Save_${userData.email}`;
                 const savedState = JSON.parse(localStorage.getItem(saveKey));
@@ -1854,7 +1951,11 @@
                 characterNameField: document.getElementById('characterNameField'),
                 saveCharacterName: document.getElementById('saveCharacterName'),
                 guestBtn: document.getElementById('guestBtn'), // Renamed from offlineBtn
-                
+
+                // Login Gate Modal
+                loginGateModal: document.getElementById('loginGateModal'),
+                playAsGuestBtn: document.getElementById('playAsGuestBtn'),
+
                 // Modals
                 minigameModal: document.getElementById('minigameModal'),
                 closeMinigame: document.getElementById('closeMinigame'),
@@ -3172,7 +3273,18 @@
                 dom.logoutBtn.click();
             });
 
-            // GUEST BUTTON LOGIC
+            // LOGIN GATE - PLAY AS GUEST BUTTON
+            dom.playAsGuestBtn.addEventListener('click', () => {
+                // Close login gate modal
+                dom.loginGateModal.style.display = 'none';
+                currentMode = 'offline';
+                dom.authSection.style.display = 'none'; // Hide auth block (now redundant)
+                dom.accountBtn.style.display = 'inline-flex';
+                dom.resetBtn.style.display = 'inline-flex';
+                loadGame(); // Load the 'offline' save
+            });
+
+            // GUEST BUTTON LOGIC (from old auth section)
             dom.guestMessageConfirmBtn.addEventListener('click', () => {
                 dom.guestMessageModal.style.display = 'none';
                 currentMode = 'offline';
