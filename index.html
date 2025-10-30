@@ -1065,6 +1065,74 @@
         .dice.rolling {
             animation: diceRoll 0.5s ease-in-out;
         }
+
+        /* --- Celebration Animations --- */
+        @keyframes levelUpGlow {
+            0% {
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset;
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 215, 0, 0.8) inset, 0 0 60px 20px rgba(92, 184, 92, 0.6);
+                transform: scale(1.02);
+            }
+            100% {
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes victoryFlash {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px var(--color-parchment) inset;
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(92, 184, 92, 0.8), 0 0 20px rgba(92, 184, 92, 0.6) inset;
+            }
+        }
+
+        @keyframes highScorePulse {
+            0%, 100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+            50% {
+                transform: scale(1.05);
+                filter: brightness(1.2);
+            }
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1.5);
+            }
+        }
+
+        .parchment.level-up-celebration {
+            animation: levelUpGlow 1s ease-in-out;
+        }
+
+        .parchment.victory-celebration {
+            animation: victoryFlash 0.5s ease-in-out;
+        }
+
+        .parchment.high-score-celebration {
+            animation: highScorePulse 0.6s ease-in-out;
+        }
+
+        /* Floating particle effect */
+        .celebration-particle {
+            position: fixed;
+            font-size: 2rem;
+            pointer-events: none;
+            z-index: 10000;
+            animation: floatUp 2s ease-out forwards;
+        }
         .combat-result {
             text-align: center;
             font-size: 1.2rem;
@@ -2458,13 +2526,18 @@
 
                 let message = "You found nothing.";
                 let xp = 1;
-                
+
                 if (foodFound === 3) {
                     message = "A perfect find! You got 3 food.";
                     xp = 10;
+                    // Celebration for perfect find
+                    triggerCelebration('high-score-celebration');
+                    createParticles('💰', 8);
                 } else if (foodFound === 2) {
                     message = "Good find. You got 2 food.";
                     xp = 5;
+                    // Small celebration for good find
+                    createParticles('💰', 4);
                 } else if (foodFound === 1) {
                     message = "You found 1 food.";
                     xp = 2;
@@ -2524,7 +2597,17 @@
 
             function addXp(amount) {
                 if (gameState.hearts <= 0) return; // No XP if dead
-                gameState.xp += amount;
+
+                // Early-level XP bonus (levels 1-20)
+                let xpMultiplier = 1.0;
+                if (gameState.level <= 20) {
+                    // Linear scaling: 2.0x at level 1, decreasing to 1.0x at level 20
+                    xpMultiplier = 2.0 - ((gameState.level - 1) / 19);
+                }
+
+                const adjustedAmount = amount * xpMultiplier;
+                gameState.xp += adjustedAmount;
+
                 const xpForLevel = (gameState.level * XP_PER_LEVEL);
                 if (gameState.xp >= xpForLevel) {
                     levelUp(xpForLevel);
@@ -2534,6 +2617,12 @@
             function levelUp(xpNeeded) {
                 gameState.level++;
                 gameState.xp -= xpNeeded; // xp can be float
+
+                // Trigger celebration effects
+                triggerCelebration('level-up-celebration');
+                createParticles('⭐', 12);
+                setTimeout(() => createParticles('✨', 8), 200);
+
                 showMessage(`Level Up! Your knight is now Level ${gameState.level}.`);
                 console.log("LEVEL UP! Now level " + gameState.level);
             }
@@ -2663,6 +2752,50 @@
                         callback();
                     }
                 }, { once: true });
+            }
+
+            // --- Celebration Effects ---
+            function triggerCelebration(type) {
+                const parchment = document.querySelector('.parchment');
+
+                // Remove any existing celebration classes
+                parchment.classList.remove('level-up-celebration', 'victory-celebration', 'high-score-celebration');
+
+                // Add the appropriate celebration class
+                parchment.classList.add(type);
+
+                // Remove the class after animation completes
+                setTimeout(() => {
+                    parchment.classList.remove(type);
+                }, 1000);
+            }
+
+            function createParticles(emoji, count = 8) {
+                const parchment = document.querySelector('.parchment');
+                const rect = parchment.getBoundingClientRect();
+
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'celebration-particle';
+                    particle.textContent = emoji;
+
+                    // Random position within the parchment
+                    const x = rect.left + rect.width * 0.2 + Math.random() * rect.width * 0.6;
+                    const y = rect.top + rect.height * 0.3 + Math.random() * rect.height * 0.4;
+
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y}px`;
+
+                    // Add slight horizontal variation to the animation
+                    particle.style.transform = `translateX(${(Math.random() - 0.5) * 50}px)`;
+
+                    document.body.appendChild(particle);
+
+                    // Remove particle after animation completes
+                    setTimeout(() => {
+                        particle.remove();
+                    }, 2000);
+                }
             }
 
             // --- New Starvation/Death Modal Listeners ---
@@ -2876,12 +3009,19 @@
                 }
                 
                 const xpGained = Math.floor(minigameScore * 1.5);
-                const foodGained = Math.max(0, Math.floor(minigameScore / 5)); // Food based on score, min 0
-                
+                const foodGained = Math.max(0, Math.floor(minigameScore / 5) * 3); // Food based on score, min 0 (3x multiplier)
+
                 addXp(xpGained);
                 gameState.food += foodGained;
-                
+
+                let isNewHighScore = false;
                 if (minigameScore > 0) { // Only save positive scores
+                    // Check if this is a new high score (top 3)
+                    const currentTopScore = gameState.highScores.targetPractice.length > 0
+                        ? gameState.highScores.targetPractice[0].score
+                        : 0;
+                    isNewHighScore = minigameScore >= currentTopScore || gameState.highScores.targetPractice.length < 3;
+
                     gameState.highScores.targetPractice.push({
                         score: minigameScore,
                         name: gameState.characterName, // Add name
@@ -2889,6 +3029,13 @@
                     });
                     gameState.highScores.targetPractice.sort((a, b) => b.score - a.score);
                     gameState.highScores.targetPractice = gameState.highScores.targetPractice.slice(0, 10);
+
+                    // Trigger high score celebration
+                    if (isNewHighScore) {
+                        triggerCelebration('high-score-celebration');
+                        createParticles('⭐', 10);
+                        setTimeout(() => createParticles('✨', 6), 200);
+                    }
                 }
                 
                 saveGame(); 
@@ -2944,9 +3091,32 @@
             
             dom.minigameArea.addEventListener('mousemove', (e) => {
                 const areaRect = dom.minigameArea.getBoundingClientRect();
-                const x = e.clientX - areaRect.left;
-                const y = e.clientY - areaRect.top;
-                
+                let x = e.clientX - areaRect.left;
+                let y = e.clientY - areaRect.top;
+
+                // Level-based cursor assistance (magnetic pull toward target)
+                if (minigameActive && dom.target.style.display !== 'none') {
+                    const targetRect = dom.target.getBoundingClientRect();
+                    const targetCenterX = targetRect.left - areaRect.left + targetRect.width / 2;
+                    const targetCenterY = targetRect.top - areaRect.top + targetRect.height / 2;
+
+                    const dx = targetCenterX - x;
+                    const dy = targetCenterY - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Apply magnetic effect only within 150px radius
+                    const magneticRadius = 150;
+                    if (distance < magneticRadius && distance > 0) {
+                        // Pull strength scales with level: 0% at level 1, up to 25% at level 50+
+                        const maxPullStrength = 0.25;
+                        const pullStrength = Math.min(gameState.level / 50, 1.0) * maxPullStrength;
+
+                        // Apply pull toward target center
+                        x += dx * pullStrength;
+                        y += dy * pullStrength;
+                    }
+                }
+
                 const crosshairSize = dom.crosshair.offsetWidth;
                 const constrainedX = Math.max(0, Math.min(x - crosshairSize / 2, areaRect.width - crosshairSize));
                 const constrainedY = Math.max(0, Math.min(y - crosshairSize / 2, areaRect.height - crosshairSize));
@@ -3167,7 +3337,11 @@
                             // Victory
                             const enemy = adventureState.enemies[adventureState.currentEnemy];
                             const xpGained = gameState.level * 10;
-                            const goldGained = gameState.level * 2;
+                            const goldGained = gameState.level * 6; // Increased from 2 to 6 (3x multiplier)
+
+                            // Trigger victory celebration
+                            triggerCelebration('victory-celebration');
+                            createParticles('💰', 6);
 
                             dom.combatResult.textContent = `Victory! +${xpGained} XP, +${goldGained} Gold`;
                             dom.combatResult.classList.add('victory');
@@ -3217,7 +3391,12 @@
                 adventureState.inProgress = false;
 
                 const xpGained = gameState.level * 50;
-                const goldGained = gameState.level * 10 + Math.floor(Math.random() * 20);
+                const goldGained = gameState.level * 30 + Math.floor(Math.random() * 60); // Increased from 10+20 to 30+60 (3x multiplier)
+
+                // Trigger victory celebration
+                triggerCelebration('victory-celebration');
+                createParticles('🏆', 8);
+                setTimeout(() => createParticles('💰', 10), 300);
 
                 addXp(xpGained);
                 gameState.food += goldGained;
